@@ -13,8 +13,8 @@ class KostController extends Controller
 {
     public function __construct()
     {
-        // Middleware untuk memastikan user sudah login
-        $this->middleware('auth:sanctum');
+        // Middleware hanya untuk method tertentu, kecuali search
+        $this->middleware('auth:sanctum')->except(['search']);
     }
 
     // Menampilkan semua kost milik pemilik yang sedang login
@@ -48,17 +48,11 @@ class KostController extends Controller
             return response()->json(['message' => 'Anda tidak memiliki akses untuk menambahkan kost'], 403);
         }
 
-        // Check if owner is verified
-        if (!$user->is_verified) {
-            return response()->json([
-                'message' => 'Akun Anda belum diverifikasi oleh admin. Silakan tunggu verifikasi untuk menambahkan kost.'
-            ], 403);
-        }
-
         $validator = Validator::make($request->all(), [
             'nama_kost' => 'required|string|max:100',
             'alamat' => 'required|string',
             'deskripsi' => 'nullable|string',
+            'fasilitas' => 'nullable|string',
             'foto_utama' => 'nullable|image|mimes:jpeg,png,jpg|max:2048'
         ]);
 
@@ -90,6 +84,7 @@ class KostController extends Controller
                 'nama_kost' => $request->nama_kost,
                 'alamat' => $request->alamat,
                 'deskripsi' => $request->deskripsi,
+                'fasilitas' => $request->fasilitas,
                 'foto_utama' => $fotoPath,
                 'status_aktif' => true
             ]);
@@ -157,6 +152,7 @@ class KostController extends Controller
                 'nama_kost' => 'required|string|max:100',
                 'alamat' => 'required|string',
                 'deskripsi' => 'nullable|string',
+                'fasilitas' => 'nullable|string',
                 'foto_utama' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
                 'status_aktif' => 'boolean'
             ]);
@@ -183,6 +179,7 @@ class KostController extends Controller
                 'nama_kost' => $request->nama_kost,
                 'alamat' => $request->alamat,
                 'deskripsi' => $request->deskripsi,
+                'fasilitas' => $request->fasilitas,
                 'status_aktif' => $request->status_aktif ?? $kost->status_aktif
             ]);
 

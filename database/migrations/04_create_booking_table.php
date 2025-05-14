@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('booking', function (Blueprint $table) {
-            $table->integer('id_booking')->primary();
+            $table->integer('id_booking')->autoIncrement()->primary();
             $table->integer('id_penyewa');
             $table->integer('id_kamar');
             $table->date('tanggal_mulai');

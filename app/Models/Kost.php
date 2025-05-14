@@ -11,14 +11,14 @@ class Kost extends Model
 
     protected $table = 'kost';
     protected $primaryKey = 'id_kost';
-    public $incrementing = false; // Set to false since we're using manual IDs
+    public $incrementing = true;
 
     protected $fillable = [
-        'id_kost',
         'id_pemilik',
         'nama_kost',
         'alamat',
         'deskripsi',
+        'fasilitas',
         'foto_utama',
         'status_aktif'
     ];

@@ -16,13 +16,13 @@ class Pengguna extends Authenticatable
     public $incrementing = false; // Set to false since we're using manual IDs
 
     protected $fillable = [
-        'id_pengguna',
         'nama',
         'email',
         'password',
         'nomor_telepon',
         'role',
-        'foto_profil'
+        'alamat',
+        'is_verified'
     ];
 
     protected $hidden = [

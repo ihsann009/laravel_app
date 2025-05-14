@@ -11,20 +11,16 @@ class Kamar extends Model
 
     protected $table = 'kamar';
     protected $primaryKey = 'id_kamar';
-    public $incrementing = false; // Set to false since we're using manual IDs
+    public $incrementing = true;
 
     protected $fillable = [
-        'id_kamar',
         'id_kost',
         'nomor_kamar',
         'harga_per_bulan',
         'ukuran_kamar',
         'status',
         'deskripsi',
-        'fasilitas',
-        'foto_kamar',
-        'fasilitas_kamar',
-        'fasilitas_umum'
+        'foto_kamar'
     ];
 
     protected $casts = [

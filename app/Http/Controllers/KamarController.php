@@ -49,19 +49,11 @@ class KamarController extends Controller
                 return response()->json(['message' => 'Anda tidak memiliki akses untuk menambahkan kamar'], 403);
             }
 
-            // Check if owner is verified
-            if (!Auth::user()->is_verified) {
-                return response()->json([
-                    'message' => 'Akun Anda belum diverifikasi oleh admin. Silakan tunggu verifikasi untuk menambahkan kamar.'
-                ], 403);
-            }
-
             $validator = Validator::make($request->all(), [
                 'nomor_kamar' => 'required|string|max:20',
                 'harga_per_bulan' => 'required|numeric|min:0',
                 'ukuran_kamar' => 'required|string|max:20',
                 'deskripsi' => 'nullable|string',
-                'fasilitas' => 'nullable|string',
                 'foto_kamar' => 'nullable|image|mimes:jpeg,png,jpg|max:2048'
             ]);
 
@@ -101,7 +93,6 @@ class KamarController extends Controller
                     'ukuran_kamar' => $request->ukuran_kamar,
                     'status' => 'tersedia',
                     'deskripsi' => $request->deskripsi,
-                    'fasilitas' => $request->fasilitas,
                     'foto_kamar' => $fotoPath
                 ]);
 
@@ -165,7 +156,6 @@ class KamarController extends Controller
                 'ukuran_kamar' => 'required|string|max:20',
                 'status' => 'required|in:tersedia,terisi,maintenance',
                 'deskripsi' => 'nullable|string',
-                'fasilitas' => 'nullable|string',
                 'foto_kamar' => 'nullable|image|mimes:jpeg,png,jpg|max:2048'
             ]);
 
@@ -200,8 +190,7 @@ class KamarController extends Controller
                 'harga_per_bulan' => $request->harga_per_bulan,
                 'ukuran_kamar' => $request->ukuran_kamar,
                 'status' => $request->status,
-                'deskripsi' => $request->deskripsi,
-                'fasilitas' => $request->fasilitas
+                'deskripsi' => $request->deskripsi
             ]);
 
             return response()->json([

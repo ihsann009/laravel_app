@@ -37,12 +37,7 @@ class RegisterController extends Controller
             return response()->json($validator->errors(), 422);
         }
 
-        // Generate ID Pengguna
-        $lastId = DB::table('pengguna')->max('id_pengguna');
-        $newId = $lastId ? $lastId + 1 : 1;
-
         $pengguna = Pengguna::create([
-            'id_pengguna' => $newId,
             'nama' => $request->nama,
             'email' => $request->email,
             'password' => Hash::make($request->password),
@@ -72,12 +67,7 @@ class RegisterController extends Controller
             return response()->json($validator->errors(), 422);
         }
 
-        // Generate ID Pengguna
-        $lastId = DB::table('pengguna')->max('id_pengguna');
-        $newId = $lastId ? $lastId + 1 : 1;
-
         $pengguna = Pengguna::create([
-            'id_pengguna' => $newId,
             'nama' => $request->nama,
             'email' => $request->email,
             'password' => Hash::make($request->password),
@@ -96,30 +86,13 @@ class RegisterController extends Controller
     // Registrasi untuk admin (protected by middleware)
     public function registerAdmin(Request $request)
     {
-        $rules = array_merge($this->baseValidationRules(), [
-            'alamat' => 'required|string',
-            'super_secret_key' => 'required|string', // tambahan keamanan
-        ]);
-
-        $validator = Validator::make($request->all(), $rules);
+        $validator = Validator::make($request->all(), $this->baseValidationRules());
 
         if ($validator->fails()) {
             return response()->json($validator->errors(), 422);
         }
 
-        // Verifikasi super_secret_key (dalam praktik nyata, gunakan env)
-        if ($request->super_secret_key !== 'your-super-secret-key') {
-            return response()->json([
-                'message' => 'Invalid secret key'
-            ], 403);
-        }
-
-        // Generate ID Pengguna
-        $lastId = DB::table('pengguna')->max('id_pengguna');
-        $newId = $lastId ? $lastId + 1 : 1;
-
         $pengguna = Pengguna::create([
-            'id_pengguna' => $newId,
             'nama' => $request->nama,
             'email' => $request->email,
             'password' => Hash::make($request->password),

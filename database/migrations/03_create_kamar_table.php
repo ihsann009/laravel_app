@@ -9,14 +9,13 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('kamar', function (Blueprint $table) {
-            $table->integer('id_kamar')->primary();
+            $table->integer('id_kamar')->autoIncrement()->primary();
             $table->integer('id_kost');
             $table->string('nomor_kamar', 20);
             $table->decimal('harga_per_bulan', 10, 2);
             $table->string('ukuran_kamar', 20); // Format: "3x3", "4x4", etc.
             $table->enum('status', ['tersedia', 'terisi', 'maintenance'])->default('tersedia');
             $table->text('deskripsi')->nullable();
-            $table->text('fasilitas')->nullable();
             $table->string('foto_kamar')->nullable(); // Store photo URL
             $table->timestamps();
 

@@ -10,11 +10,13 @@ use App\Http\Controllers\KostController;
 use App\Http\Controllers\KamarController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\Admin\VerificationController;
+use App\Http\Controllers\UlasanController;
 
 // Authentication Routes
 Route::post('/register', [RegisterController::class, 'registerPenyewa']);
 Route::post('/register/pemilik-kost', [RegisterController::class, 'registerPemilikKost']);
 Route::post('/login', [LoginController::class, 'login']);
+Route::post('/register/admin', [RegisterController::class, 'registerAdmin'])->name('register.admin');
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', function (Request $request) {
@@ -31,7 +33,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Kost Management
     Route::get('/kost', [KostController::class, 'index']); // List kost (semua untuk penyewa, milik sendiri untuk pemilik)
-    Route::get('/kost/search', [KostController::class, 'search']); // Pencarian kost untuk penyewa
+    Route::get('/kost/search', [KostController::class, 'search']);
     Route::post('/kost', [KostController::class, 'store']); // Tambah kost baru
     Route::get('/kost/{id}', [KostController::class, 'show']); // Detail kost
     Route::put('/kost/{id}', [KostController::class, 'update']); // Update kost
@@ -55,6 +57,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // Detail dan update booking (harus di bawah /my dan /owner)
     Route::get('/bookings/{id}', [BookingController::class, 'show']); // Detail booking
     Route::put('/bookings/{id}/status', [BookingController::class, 'updateStatus']); // Update status booking
+
+    Route::post('/ulasan', [UlasanController::class, 'store']);
 });
 
 // Routes untuk verifikasi pemilik kost (admin only)
