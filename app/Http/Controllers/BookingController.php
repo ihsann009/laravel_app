@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class BookingController extends Controller
 {
@@ -18,20 +19,222 @@ class BookingController extends Controller
         $this->middleware('auth:sanctum');
     }
 
-    // Menampilkan semua booking untuk pemilik kost
+    public function index()
+    {
+        $user = Auth::user();
+        $query = Booking::query();
+
+        if ($user->role === 'penyewa') {
+            $query->where('id_penyewa', $user->id_pengguna);
+        } elseif ($user->role === 'pemilik_kost') {
+            $query->whereHas('kamar.kost', function($q) use ($user) {
+                $q->where('id_pemilik', $user->id_pengguna);
+            });
+        }
+
+        $bookings = $query->with(['kamar.kost', 'penyewa'])->get();
+
+        return response()->json([
+            'message' => 'Data booking berhasil diambil',
+            'bookings' => $bookings
+        ]);
+    }
+
+    public function store(Request $request)
+    {
+        $user = Auth::user();
+        if ($user->role !== 'penyewa') {
+            return response()->json(['message' => 'Anda tidak memiliki akses untuk membuat booking'], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'id_kamar' => 'required|integer',
+            'tanggal_mulai' => 'required|date|after:today',
+            'tanggal_selesai' => 'required|date|after:tanggal_mulai',
+            'catatan' => 'nullable|string',
+            'bukti_pembayaran' => 'required|image|mimes:jpeg,png,jpg|max:2048'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Validasi gagal',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            $kamar = Kamar::findOrFail($request->id_kamar);
+            if ($kamar->status !== 'tersedia') {
+                return response()->json([
+                    'message' => 'Kamar tidak tersedia untuk dibooking'
+                ], 422);
+            }
+
+            $existingBooking = Booking::where('id_kamar', $request->id_kamar)
+                ->where(function($query) use ($request) {
+                    $query->whereBetween('tanggal_mulai', [$request->tanggal_mulai, $request->tanggal_selesai])
+                        ->orWhereBetween('tanggal_selesai', [$request->tanggal_mulai, $request->tanggal_selesai])
+                        ->orWhere(function($q) use ($request) {
+                            $q->where('tanggal_mulai', '<=', $request->tanggal_mulai)
+                                ->where('tanggal_selesai', '>=', $request->tanggal_selesai);
+                        });
+                })
+                ->where('status', '!=', 'batal')
+                ->first();
+
+            if ($existingBooking) {
+                return response()->json([
+                    'message' => 'Kamar sudah dibooking untuk periode tersebut'
+                ], 422);
+            }
+
+            $buktiPath = null;
+            if ($request->hasFile('bukti_pembayaran')) {
+                $bukti = $request->file('bukti_pembayaran');
+                $buktiPath = $bukti->store('bukti_pembayaran', 'public');
+            }
+
+            $durasi = strtotime($request->tanggal_selesai) - strtotime($request->tanggal_mulai);
+            $bulan = ceil($durasi / (30 * 24 * 60 * 60));
+            $totalHarga = $kamar->harga_per_bulan * $bulan;
+
+            $lastId = DB::table('booking')->max('id_booking');
+            $newId = $lastId ? $lastId + 1 : 1;
+
+            $booking = Booking::create([
+                'id_booking' => $newId,
+                'id_kamar' => $request->id_kamar,
+                'id_penyewa' => $user->id_pengguna,
+                'tanggal_mulai' => $request->tanggal_mulai,
+                'tanggal_selesai' => $request->tanggal_selesai,
+                'status' => 'pending',
+                'total_harga' => $totalHarga,
+                'bukti_pembayaran' => $buktiPath,
+                'catatan' => $request->catatan
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Booking berhasil dibuat',
+                'booking' => $booking
+            ], 201);
+
+        } catch (\Exception $e) {
+            DB::rollback();
+            return response()->json([
+                'message' => 'Gagal membuat booking',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function show($id)
+    {
+        try {
+            $booking = Booking::with(['kamar.kost', 'penyewa'])->findOrFail($id);
+            $user = Auth::user();
+
+            if ($user->role === 'penyewa' && $booking->id_penyewa !== $user->id_pengguna) {
+                return response()->json(['message' => 'Anda tidak memiliki akses untuk melihat booking ini'], 403);
+            } elseif ($user->role === 'pemilik_kost' && $booking->kamar->kost->id_pemilik !== $user->id_pengguna) {
+                return response()->json(['message' => 'Anda tidak memiliki akses untuk melihat booking ini'], 403);
+            }
+
+            return response()->json([
+                'message' => 'Detail booking berhasil diambil',
+                'booking' => $booking
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Booking tidak ditemukan'], 404);
+        }
+    }
+
+    public function update(Request $request, $id)
+    {
+        try {
+            $booking = Booking::findOrFail($id);
+            $user = Auth::user();
+
+            if ($user->role === 'penyewa' && $booking->id_penyewa !== $user->id_pengguna) {
+                return response()->json(['message' => 'Anda tidak memiliki akses untuk mengubah booking ini'], 403);
+            } elseif ($user->role === 'pemilik_kost' && $booking->kamar->kost->id_pemilik !== $user->id_pengguna) {
+                return response()->json(['message' => 'Anda tidak memiliki akses untuk mengubah booking ini'], 403);
+            }
+
+            $validator = Validator::make($request->all(), [
+                'status' => 'required|in:pending,diterima,ditolak,batal',
+                'catatan' => 'nullable|string'
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'message' => 'Validasi gagal',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            if ($request->status === 'diterima' && $booking->status === 'pending') {
+                $booking->kamar->update(['status' => 'terisi']);
+            }
+
+            $booking->update([
+                'status' => $request->status,
+                'catatan' => $request->catatan
+            ]);
+
+            return response()->json([
+                'message' => 'Status booking berhasil diperbarui',
+                'booking' => $booking
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Booking tidak ditemukan'], 404);
+        }
+    }
+
+    public function destroy($id)
+    {
+        try {
+            $booking = Booking::findOrFail($id);
+            $user = Auth::user();
+
+            if ($user->role === 'penyewa' && $booking->id_penyewa !== $user->id_pengguna) {
+                return response()->json(['message' => 'Anda tidak memiliki akses untuk menghapus booking ini'], 403);
+            } elseif ($user->role === 'pemilik_kost' && $booking->kamar->kost->id_pemilik !== $user->id_pengguna) {
+                return response()->json(['message' => 'Anda tidak memiliki akses untuk menghapus booking ini'], 403);
+            }
+
+            if ($booking->bukti_pembayaran) {
+                Storage::disk('public')->delete($booking->bukti_pembayaran);
+            }
+
+            if ($booking->status === 'diterima') {
+                $booking->kamar->update(['status' => 'tersedia']);
+            }
+
+            $booking->delete();
+
+            return response()->json([
+                'message' => 'Booking berhasil dihapus'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Booking tidak ditemukan'], 404);
+        }
+    }
+
     public function indexForOwner()
     {
         $user = Auth::user();
         
         if ($user->role !== 'pemilik_kost') {
-            return response()->json(['message' => 'Unauthorized'], 403);
+            return response()->json(['message' => 'Anda tidak memiliki akses untuk melihat daftar booking ini'], 403);
         }
 
-        // Ambil semua kost milik pemilik
         $kostIds = Kost::where('id_pemilik', $user->id_pengguna)
                       ->pluck('id_kost');
 
-        // Ambil semua booking dari kamar-kamar di kost milik pemilik
         $bookings = Booking::whereHas('kamar', function($query) use ($kostIds) {
                         $query->whereIn('id_kost', $kostIds);
                     })
@@ -45,73 +248,6 @@ class BookingController extends Controller
         ]);
     }
 
-    // Menampilkan detail booking
-    public function show($id)
-    {
-        $user = Auth::user();
-        $booking = Booking::with(['penyewa:id_pengguna,nama,nomor_telepon,email', 'kamar.kost'])
-                         ->find($id);
-
-        if (!$booking) {
-            return response()->json(['message' => 'Booking tidak ditemukan'], 404);
-        }
-
-        // Cek apakah user adalah pemilik kost
-        if ($user->role === 'pemilik_kost') {
-            if ($booking->kamar->kost->id_pemilik !== $user->id_pengguna) {
-                return response()->json(['message' => 'Unauthorized'], 403);
-            }
-        }
-        // Cek apakah user adalah penyewa yang membuat booking
-        else if ($user->role === 'penyewa') {
-            if ($booking->id_pengguna !== $user->id_pengguna) {
-                return response()->json(['message' => 'Unauthorized'], 403);
-            }
-        }
-
-        return response()->json([
-            'message' => 'Detail booking berhasil diambil',
-            'booking' => $booking
-        ]);
-    }
-
-    // Update status booking (terima/tolak)
-    public function updateStatus(Request $request, $id)
-    {
-        $user = Auth::user();
-        $booking = Booking::with('kamar.kost')->find($id);
-
-        if (!$booking) {
-            return response()->json(['message' => 'Booking tidak ditemukan'], 404);
-        }
-
-        // Cek kepemilikan kost
-        if ($booking->kamar->kost->id_pemilik !== $user->id_pengguna) {
-            return response()->json(['message' => 'Unauthorized'], 403);
-        }
-
-        $request->validate([
-            'status' => 'required|in:diterima,ditolak',
-            'catatan' => 'nullable|string'
-        ]);
-
-        $booking->update([
-            'status' => $request->status,
-            'catatan' => $request->catatan
-        ]);
-
-        // Jika booking diterima, update status kamar menjadi terisi
-        if ($request->status === 'diterima') {
-            $booking->kamar->update(['status' => 'terisi']);
-        }
-
-        return response()->json([
-            'message' => 'Status booking berhasil diupdate',
-            'booking' => $booking
-        ]);
-    }
-
-    // Menampilkan semua booking untuk penyewa yang sedang login
     public function indexForPenyewa()
     {
         try {
@@ -119,17 +255,16 @@ class BookingController extends Controller
             
             if (!$user) {
                 return response()->json([
-                    'message' => 'User tidak terautentikasi'
+                    'message' => 'Anda belum login'
                 ], 401);
             }
 
             if ($user->role !== 'penyewa') {
                 return response()->json([
-                    'message' => 'Unauthorized - Role bukan penyewa'
+                    'message' => 'Anda tidak memiliki akses untuk melihat daftar booking ini'
                 ], 403);
             }
 
-            // Cek data booking langsung dari database
             $rawQuery = DB::select("SELECT * FROM booking WHERE id_pengguna = ?", [$user->id_pengguna]);
             
             if (empty($rawQuery)) {
@@ -139,7 +274,6 @@ class BookingController extends Controller
                 ]);
             }
 
-            // Jika ada data di database, ambil dengan Eloquent
             $bookings = Booking::with(['kamar.kost'])
                         ->where('id_pengguna', $user->id_pengguna)
                         ->orderBy('created_at', 'desc')
@@ -191,145 +325,6 @@ class BookingController extends Controller
         }
     }
 
-    // Membuat booking baru (untuk penyewa)
-    public function store(Request $request)
-    {
-        $user = Auth::user();
-        
-        if ($user->role !== 'penyewa') {
-            return response()->json(['message' => 'Unauthorized'], 403);
-        }
-
-        $validator = Validator::make($request->all(), [
-            'id_kost' => 'required|exists:kost,id_kost',
-            'id_kamar' => [
-                'required',
-                'exists:kamar,id_kamar',
-                function ($attribute, $value, $fail) use ($request) {
-                    // Validasi bahwa kamar memang milik kost yang dipilih
-                    $kamar = Kamar::where('id_kamar', $value)
-                        ->where('id_kost', $request->id_kost)
-                        ->first();
-                    
-                    if (!$kamar) {
-                        $fail('Kamar tidak ditemukan di kost yang dipilih.');
-                    }
-                },
-            ],
-            'tanggal_mulai' => 'required|date|after:today',
-            'tanggal_selesai' => 'required|date|after:tanggal_mulai',
-            'catatan' => 'nullable|string|max:500'
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'message' => 'Validasi gagal',
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
-        // Cek apakah kamar tersedia
-        $kamar = Kamar::with('kost')->find($request->id_kamar);
-        
-        // Validasi status kost
-        if (!$kamar->kost->status_aktif) {
-            return response()->json([
-                'message' => 'Kost sedang tidak aktif untuk dibooking'
-            ], 422);
-        }
-
-        // Validasi status kamar
-        if ($kamar->status !== 'tersedia') {
-            return response()->json([
-                'message' => 'Kamar tidak tersedia untuk dibooking',
-                'status_kamar' => $kamar->status
-            ], 422);
-        }
-
-        // Cek apakah ada booking yang overlap
-        $existingBooking = Booking::where('id_kamar', $request->id_kamar)
-            ->where('status', 'diterima')
-            ->where(function($query) use ($request) {
-                $query->whereBetween('tanggal_mulai', [$request->tanggal_mulai, $request->tanggal_selesai])
-                    ->orWhereBetween('tanggal_selesai', [$request->tanggal_mulai, $request->tanggal_selesai])
-                    ->orWhere(function($q) use ($request) {
-                        $q->where('tanggal_mulai', '<=', $request->tanggal_mulai)
-                          ->where('tanggal_selesai', '>=', $request->tanggal_selesai);
-                    });
-            })
-            ->first();
-
-        if ($existingBooking) {
-            return response()->json([
-                'message' => 'Kamar sudah dibooking untuk periode tersebut',
-                'periode_terisi' => [
-                    'mulai' => $existingBooking->tanggal_mulai,
-                    'selesai' => $existingBooking->tanggal_selesai
-                ]
-            ], 422);
-        }
-
-        try {
-            $booking = Booking::create([
-                'id_pengguna' => $user->id_pengguna,
-                'id_kamar' => $request->id_kamar,
-                'tanggal_mulai' => $request->tanggal_mulai,
-                'tanggal_selesai' => $request->tanggal_selesai,
-                'status' => 'pending',
-                'catatan' => $request->catatan
-            ]);
-
-            // Load relations dengan informasi lengkap
-            $booking->load([
-                'kamar' => function($query) {
-                    $query->select('id_kamar', 'id_kost', 'nomor_kamar', 'harga_per_bulan', 'ukuran_kamar', 'status');
-                },
-                'kamar.kost' => function($query) {
-                    $query->select('id_kost', 'nama_kost', 'alamat');
-                },
-                'penyewa' => function($query) {
-                    $query->select('id_pengguna', 'nama', 'nomor_telepon', 'email');
-                }
-            ]);
-
-            // Format response yang lebih informatif
-            return response()->json([
-                'message' => 'Booking berhasil dibuat',
-                'booking' => [
-                    'id_booking' => $booking->id_booking,
-                    'status_booking' => $booking->status,
-                    'periode_sewa' => [
-                        'mulai' => $booking->tanggal_mulai,
-                        'selesai' => $booking->tanggal_selesai
-                    ],
-                    'informasi_kamar' => [
-                        'nomor_kamar' => $booking->kamar->nomor_kamar,
-                        'ukuran' => $booking->kamar->ukuran_kamar . ' m²',
-                        'harga_per_bulan' => number_format($booking->kamar->harga_per_bulan, 0, ',', '.')
-                    ],
-                    'informasi_kost' => [
-                        'nama_kost' => $booking->kamar->kost->nama_kost,
-                        'alamat' => $booking->kamar->kost->alamat
-                    ],
-                    'informasi_penyewa' => [
-                        'nama' => $booking->penyewa->nama,
-                        'nomor_telepon' => $booking->penyewa->nomor_telepon,
-                        'email' => $booking->penyewa->email
-                    ],
-                    'catatan' => $booking->catatan,
-                    'created_at' => $booking->created_at
-                ]
-            ], 201);
-        } catch (\Exception $e) {
-            Log::error('Error creating booking: ' . $e->getMessage());
-            return response()->json([
-                'message' => 'Gagal membuat booking',
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    // Mencari booking berdasarkan lokasi
     public function searchByLocation(Request $request)
     {
         try {
@@ -337,7 +332,7 @@ class BookingController extends Controller
             
             if (!$user) {
                 return response()->json([
-                    'message' => 'User tidak terautentikasi'
+                    'message' => 'Anda belum login'
                 ], 401);
             }
 
@@ -347,18 +342,15 @@ class BookingController extends Controller
 
             $searchTerm = $request->lokasi;
 
-            // Query untuk mencari booking berdasarkan lokasi kost
             $bookings = Booking::with(['kamar.kost'])
                 ->whereHas('kamar.kost', function($query) use ($searchTerm) {
                     $query->where('alamat', 'like', '%' . $searchTerm . '%')
                         ->orWhere('nama_kost', 'like', '%' . $searchTerm . '%');
                 });
 
-            // Jika user adalah penyewa, hanya tampilkan booking miliknya
             if ($user->role === 'penyewa') {
                 $bookings->where('id_pengguna', $user->id_pengguna);
             }
-            // Jika user adalah pemilik kost, hanya tampilkan booking di kostnya
             else if ($user->role === 'pemilik_kost') {
                 $kostIds = Kost::where('id_pemilik', $user->id_pengguna)->pluck('id_kost');
                 $bookings->whereHas('kamar', function($query) use ($kostIds) {

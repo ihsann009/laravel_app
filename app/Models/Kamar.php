@@ -11,25 +11,25 @@ class Kamar extends Model
 
     protected $table = 'kamar';
     protected $primaryKey = 'id_kamar';
+    public $incrementing = false; // Set to false since we're using manual IDs
 
     protected $fillable = [
+        'id_kamar',
         'id_kost',
         'nomor_kamar',
         'harga_per_bulan',
         'ukuran_kamar',
         'status',
         'deskripsi',
+        'fasilitas',
         'foto_kamar',
         'fasilitas_kamar',
-        'fasilitas_umum',
+        'fasilitas_umum'
     ];
 
     protected $casts = [
         'harga_per_bulan' => 'decimal:2',
-        'ukuran_kamar' => 'decimal:2',
-        'foto_kamar' => 'array',
-        'fasilitas_kamar' => 'array',
-        'fasilitas_umum' => 'array',
+        'ukuran_kamar' => 'decimal:2'
     ];
 
     // Relasi dengan kost
@@ -44,11 +44,9 @@ class Kamar extends Model
         return $this->hasMany(Booking::class, 'id_kamar');
     }
 
-    // Relasi dengan fasilitas
-    public function fasilitas()
+    // Scope untuk kamar tersedia
+    public function scopeTersedia($query)
     {
-        return $this->belongsToMany(Fasilitas::class, 'kamar_fasilitas', 'id_kamar', 'id_fasilitas')
-                    ->withPivot('keterangan')
-                    ->withTimestamps();
+        return $query->where('status', 'tersedia');
     }
 } 

@@ -9,14 +9,19 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('kost', function (Blueprint $table) {
-            $table->id('id_kost');
-            $table->foreignId('id_pemilik')->constrained('pengguna', 'id_pengguna')->onDelete('cascade');
+            $table->integer('id_kost')->primary();
+            $table->integer('id_pemilik');
             $table->string('nama_kost', 100);
             $table->text('alamat');
             $table->text('deskripsi')->nullable();
             $table->string('foto_utama')->nullable();
             $table->boolean('status_aktif')->default(true);
             $table->timestamps();
+
+            $table->foreign('id_pemilik')
+                  ->references('id_pengguna')
+                  ->on('pengguna')
+                  ->onDelete('cascade');
         });
     }
 

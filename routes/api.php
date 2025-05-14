@@ -9,6 +9,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\KostController;
 use App\Http\Controllers\KamarController;
 use App\Http\Controllers\BookingController;
+use App\Http\Controllers\Admin\VerificationController;
 
 // Authentication Routes
 Route::post('/register', [RegisterController::class, 'registerPenyewa']);
@@ -17,7 +18,7 @@ Route::post('/login', [LoginController::class, 'login']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', function (Request $request) {
-        return $request->user();
+    return $request->user();
     });
     
     Route::get('/protected-data', function () {
@@ -54,4 +55,11 @@ Route::middleware('auth:sanctum')->group(function () {
     // Detail dan update booking (harus di bawah /my dan /owner)
     Route::get('/bookings/{id}', [BookingController::class, 'show']); // Detail booking
     Route::put('/bookings/{id}/status', [BookingController::class, 'updateStatus']); // Update status booking
+});
+
+// Routes untuk verifikasi pemilik kost (admin only)
+Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
+    Route::get('/admin/unverified-owners', [VerificationController::class, 'getUnverifiedOwners']);
+    Route::post('/admin/verify-owner/{id_pengguna}', [VerificationController::class, 'verifyOwner']);
+    Route::post('/admin/unverify-owner/{id_pengguna}', [VerificationController::class, 'unverifyOwner']);
 });

@@ -7,6 +7,7 @@ use App\Models\Pengguna;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
 
 class RegisterController extends Controller
 {
@@ -36,7 +37,12 @@ class RegisterController extends Controller
             return response()->json($validator->errors(), 422);
         }
 
+        // Generate ID Pengguna
+        $lastId = DB::table('pengguna')->max('id_pengguna');
+        $newId = $lastId ? $lastId + 1 : 1;
+
         $pengguna = Pengguna::create([
+            'id_pengguna' => $newId,
             'nama' => $request->nama,
             'email' => $request->email,
             'password' => Hash::make($request->password),
@@ -60,20 +66,23 @@ class RegisterController extends Controller
             'password' => 'required|string|min:8|confirmed',
             'nomor_telepon' => 'required|string|max:15',
             'alamat' => 'required|string',
-            'ktp_number' => 'required|string|max:20|unique:pengguna',
         ]);
 
         if ($validator->fails()) {
             return response()->json($validator->errors(), 422);
         }
 
+        // Generate ID Pengguna
+        $lastId = DB::table('pengguna')->max('id_pengguna');
+        $newId = $lastId ? $lastId + 1 : 1;
+
         $pengguna = Pengguna::create([
+            'id_pengguna' => $newId,
             'nama' => $request->nama,
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'nomor_telepon' => $request->nomor_telepon,
             'alamat' => $request->alamat,
-            'ktp_number' => $request->ktp_number,
             'role' => 'pemilik_kost',
             'is_verified' => false,
         ]);
@@ -105,7 +114,12 @@ class RegisterController extends Controller
             ], 403);
         }
 
+        // Generate ID Pengguna
+        $lastId = DB::table('pengguna')->max('id_pengguna');
+        $newId = $lastId ? $lastId + 1 : 1;
+
         $pengguna = Pengguna::create([
+            'id_pengguna' => $newId,
             'nama' => $request->nama,
             'email' => $request->email,
             'password' => Hash::make($request->password),

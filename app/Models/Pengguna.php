@@ -13,16 +13,16 @@ class Pengguna extends Authenticatable
 
     protected $table = 'pengguna';
     protected $primaryKey = 'id_pengguna';
+    public $incrementing = false; // Set to false since we're using manual IDs
 
     protected $fillable = [
+        'id_pengguna',
         'nama',
         'email',
         'password',
-        'role',
         'nomor_telepon',
-        'alamat',
-        'ktp_number',
-        'is_verified',
+        'role',
+        'foto_profil'
     ];
 
     protected $hidden = [
@@ -31,19 +31,20 @@ class Pengguna extends Authenticatable
     ];
 
     protected $casts = [
-        'is_verified' => 'boolean',
+        'email_verified_at' => 'datetime',
+        'password' => 'hashed',
         'tanggal_daftar' => 'datetime',
     ];
 
     // Relasi dengan kost (untuk pemilik kost)
     public function kost()
     {
-        return $this->hasMany(Kost::class, 'id_pemilik');
+        return $this->hasMany(Kost::class, 'id_pemilik', 'id_pengguna');
     }
 
     // Relasi dengan booking (untuk penyewa)
     public function booking()
     {
-        return $this->hasMany(Booking::class, 'id_pengguna');
+        return $this->hasMany(Booking::class, 'id_penyewa', 'id_pengguna');
     }
 } 

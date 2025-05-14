@@ -25,7 +25,7 @@ class RegisteredUserController extends Controller
             $validated = $request->validate([
                 'nama' => ['required', 'string', 'max:100'],
                 'email' => ['required', 'string', 'lowercase', 'email', 'max:100', 'unique:'.User::class],
-                'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            'password' => ['required', 'confirmed', Rules\Password::defaults()],
                 'nomor_telepon' => ['required', 'string', 'max:15'],
                 'alamat' => ['nullable', 'string'],
             ]);
@@ -40,18 +40,18 @@ class RegisteredUserController extends Controller
                 ], 422);
             }
 
-            $user = User::create([
+        $user = User::create([
                 'nama' => $validated['nama'],
                 'email' => $validated['email'],
                 'password' => Hash::make($validated['password']),
                 'role' => 'penyewa',
                 'nomor_telepon' => $validated['nomor_telepon'],
                 'alamat' => $validated['alamat'] ?? null,
-            ]);
+        ]);
 
-            event(new Registered($user));
+        event(new Registered($user));
 
-            Auth::login($user);
+        Auth::login($user);
 
             // Return success response with user data
             return response()->json([

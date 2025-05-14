@@ -9,17 +9,22 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('kamar', function (Blueprint $table) {
-            $table->id('id_kamar');
-            $table->foreignId('id_kost')->constrained('kost', 'id_kost')->onDelete('cascade');
+            $table->integer('id_kamar')->primary();
+            $table->integer('id_kost');
             $table->string('nomor_kamar', 20);
             $table->decimal('harga_per_bulan', 10, 2);
-            $table->decimal('ukuran_kamar', 5, 2); // in square meters
+            $table->string('ukuran_kamar', 20); // Format: "3x3", "4x4", etc.
             $table->enum('status', ['tersedia', 'terisi', 'maintenance'])->default('tersedia');
             $table->text('deskripsi')->nullable();
-            $table->json('foto_kamar')->nullable(); // Store multiple photo URLs
-            $table->json('fasilitas_kamar')->nullable(); // Store facilities as {"nama": "AC", "keterangan": "1.5 PK"}
-            $table->json('fasilitas_umum')->nullable(); // Store general facilities
+            $table->text('fasilitas')->nullable();
+            $table->string('foto_kamar')->nullable(); // Store photo URL
             $table->timestamps();
+
+            // Foreign key
+            $table->foreign('id_kost')
+                  ->references('id_kost')
+                  ->on('kost')
+                  ->onDelete('cascade');
 
             // Indexes
             $table->index('status');

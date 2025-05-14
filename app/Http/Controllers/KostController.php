@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 
 class KostController extends Controller
 {
@@ -44,7 +45,14 @@ class KostController extends Controller
     {
         $user = Auth::user();
         if ($user->role !== 'pemilik_kost') {
-            return response()->json(['message' => 'Unauthorized'], 403);
+            return response()->json(['message' => 'Anda tidak memiliki akses untuk menambahkan kost'], 403);
+        }
+
+        // Check if owner is verified
+        if (!$user->is_verified) {
+            return response()->json([
+                'message' => 'Akun Anda belum diverifikasi oleh admin. Silakan tunggu verifikasi untuk menambahkan kost.'
+            ], 403);
         }
 
         $validator = Validator::make($request->all(), [
@@ -55,244 +63,257 @@ class KostController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json($validator->errors(), 422);
+            return response()->json([
+                'message' => 'Validasi gagal',
+                'errors' => $validator->errors()
+            ], 422);
         }
 
-        // Handle upload foto jika ada
-        $fotoPath = null;
-        if ($request->hasFile('foto_utama')) {
-            $foto = $request->file('foto_utama');
-            $fotoPath = $foto->store('kost', 'public');
+        try {
+            DB::beginTransaction();
+
+            // Handle upload foto jika ada
+            $fotoPath = null;
+            if ($request->hasFile('foto_utama')) {
+                $foto = $request->file('foto_utama');
+                $fotoPath = $foto->store('kost', 'public');
+            }
+
+            // Generate ID kost
+            $lastId = DB::table('kost')->max('id_kost');
+            $newId = $lastId ? $lastId + 1 : 1;
+
+            // Buat kost baru
+            $kost = Kost::create([
+                'id_kost' => $newId,
+                'id_pemilik' => $user->id_pengguna,
+                'nama_kost' => $request->nama_kost,
+                'alamat' => $request->alamat,
+                'deskripsi' => $request->deskripsi,
+                'foto_utama' => $fotoPath,
+                'status_aktif' => true
+            ]);
+
+            DB::commit();
+
+            // Load relasi yang diperlukan
+            $kost->load(['pemilik:id_pengguna,nama,nomor_telepon']);
+
+            return response()->json([
+                'message' => 'Kost berhasil ditambahkan',
+                'kost' => [
+                    'id_kost' => $kost->id_kost,
+                    'nama_kost' => $kost->nama_kost,
+                    'alamat' => $kost->alamat,
+                    'deskripsi' => $kost->deskripsi,
+                    'foto_utama' => $kost->foto_utama ? url('storage/' . $kost->foto_utama) : null,
+                    'status_aktif' => $kost->status_aktif,
+                    'pemilik' => $kost->pemilik,
+                    'created_at' => $kost->created_at,
+                    'updated_at' => $kost->updated_at
+                ]
+            ], 201);
+
+        } catch (\Exception $e) {
+            DB::rollback();
+            return response()->json([
+                'message' => 'Gagal menambahkan kost',
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-        $kost = Kost::create([
-            'id_pemilik' => $user->id_pengguna,
-            'nama_kost' => $request->nama_kost,
-            'alamat' => $request->alamat,
-            'deskripsi' => $request->deskripsi,
-            'foto_utama' => $fotoPath,
-            'status_aktif' => true
-        ]);
-
-        return response()->json([
-            'message' => 'Kost berhasil ditambahkan',
-            'kost' => $kost
-        ], 201);
     }
 
     // Menampilkan detail kost
     public function show($id)
     {
-        $kost = Kost::with(['kamar', 'pemilik'])->find($id);
-        
-        if (!$kost) {
+        try {
+            $kost = Kost::with(['kamar', 'pemilik'])->findOrFail($id);
+            
+            if (Auth::user()->role !== 'pemilik_kost' && !$kost->status_aktif) {
+                return response()->json(['message' => 'Kost tidak ditemukan'], 404);
+            }
+
+            return response()->json([
+                'message' => 'Detail kost berhasil diambil',
+                'kost' => $kost
+            ]);
+        } catch (\Exception $e) {
             return response()->json(['message' => 'Kost tidak ditemukan'], 404);
         }
-
-        // Jika bukan pemilik dan kost tidak aktif, jangan tampilkan
-        if (Auth::user()->role !== 'pemilik_kost' && !$kost->status_aktif) {
-            return response()->json(['message' => 'Kost tidak ditemukan'], 404);
-        }
-
-        return response()->json([
-            'message' => 'Detail kost berhasil diambil',
-            'kost' => $kost
-        ]);
     }
 
     // Mengupdate data kost
     public function update(Request $request, $id)
     {
-        $user = Auth::user();
-        $kost = Kost::find($id);
+        try {
+            $user = Auth::user();
+            $kost = Kost::findOrFail($id);
 
-        if (!$kost) {
+            if ($kost->id_pemilik !== $user->id_pengguna) {
+                return response()->json(['message' => 'Anda tidak memiliki akses untuk mengubah kost ini'], 403);
+            }
+
+            $validator = Validator::make($request->all(), [
+                'nama_kost' => 'required|string|max:100',
+                'alamat' => 'required|string',
+                'deskripsi' => 'nullable|string',
+                'foto_utama' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+                'status_aktif' => 'boolean'
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'message' => 'Validasi gagal',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            // Handle upload foto baru jika ada
+            if ($request->hasFile('foto_utama')) {
+                // Hapus foto lama jika ada
+                if ($kost->foto_utama) {
+                    Storage::disk('public')->delete($kost->foto_utama);
+                }
+                $foto = $request->file('foto_utama');
+                $fotoPath = $foto->store('kost', 'public');
+                $kost->foto_utama = $fotoPath;
+            }
+
+            $kost->update([
+                'nama_kost' => $request->nama_kost,
+                'alamat' => $request->alamat,
+                'deskripsi' => $request->deskripsi,
+                'status_aktif' => $request->status_aktif ?? $kost->status_aktif
+            ]);
+
+            return response()->json([
+                'message' => 'Data kost berhasil diperbarui',
+                'kost' => $kost
+            ]);
+        } catch (\Exception $e) {
             return response()->json(['message' => 'Kost tidak ditemukan'], 404);
         }
-
-        // Cek kepemilikan kost
-        if ($kost->id_pemilik !== $user->id_pengguna) {
-            return response()->json(['message' => 'Unauthorized'], 403);
-        }
-
-        $validator = Validator::make($request->all(), [
-            'nama_kost' => 'required|string|max:100',
-            'alamat' => 'required|string',
-            'deskripsi' => 'nullable|string',
-            'foto_utama' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
-            'status_aktif' => 'boolean'
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json($validator->errors(), 422);
-        }
-
-        // Handle upload foto baru jika ada
-        if ($request->hasFile('foto_utama')) {
-            // Hapus foto lama jika ada
-            if ($kost->foto_utama) {
-                Storage::disk('public')->delete($kost->foto_utama);
-            }
-            $foto = $request->file('foto_utama');
-            $fotoPath = $foto->store('kost', 'public');
-            $kost->foto_utama = $fotoPath;
-        }
-
-        $kost->update([
-            'nama_kost' => $request->nama_kost,
-            'alamat' => $request->alamat,
-            'deskripsi' => $request->deskripsi,
-            'status_aktif' => $request->status_aktif ?? $kost->status_aktif
-        ]);
-
-        return response()->json([
-            'message' => 'Data kost berhasil diupdate',
-            'kost' => $kost
-        ]);
     }
 
     // Menghapus data kost
     public function destroy($id)
     {
-        $user = Auth::user();
-        $kost = Kost::find($id);
+        try {
+            $user = Auth::user();
+            $kost = Kost::findOrFail($id);
 
-        if (!$kost) {
+            if ($kost->id_pemilik !== $user->id_pengguna) {
+                return response()->json(['message' => 'Anda tidak memiliki akses untuk menghapus kost ini'], 403);
+            }
+
+            // Hapus foto jika ada
+            if ($kost->foto_utama) {
+                Storage::disk('public')->delete($kost->foto_utama);
+            }
+
+            $kost->delete();
+
+            return response()->json([
+                'message' => 'Kost berhasil dihapus'
+            ]);
+        } catch (\Exception $e) {
             return response()->json(['message' => 'Kost tidak ditemukan'], 404);
         }
-
-        // Cek kepemilikan kost
-        if ($kost->id_pemilik !== $user->id_pengguna) {
-            return response()->json(['message' => 'Unauthorized'], 403);
-        }
-
-        // Hapus foto jika ada
-        if ($kost->foto_utama) {
-            Storage::disk('public')->delete($kost->foto_utama);
-        }
-
-        $kost->delete();
-
-        return response()->json([
-            'message' => 'Kost berhasil dihapus'
-        ]);
     }
 
     // Menambahkan method untuk pencarian kost
     public function search(Request $request)
     {
-        // Validasi input pencarian
-        $validator = Validator::make($request->all(), [
-            'alamat' => 'nullable|string',
-            'harga_min' => 'nullable|numeric|min:0',
-            'harga_max' => 'nullable|numeric|min:0',
-        ]);
+        try {
+            $query = Kost::query()->where('status_aktif', true);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'message' => 'Format pencarian tidak valid',
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
-        // Validasi jika harga_min lebih besar dari harga_max
-        if ($request->has('harga_min') && $request->has('harga_max')) {
-            if ($request->harga_min > $request->harga_max) {
-                return response()->json([
-                    'message' => 'Rentang harga tidak valid',
-                    'error' => 'Harga minimum tidak boleh lebih besar dari harga maksimum'
-                ], 422);
-            }
-        }
-
-        $query = Kost::where('status_aktif', true);
-
-        // Filter berdasarkan alamat
-        if ($request->has('alamat')) {
-            $query->where(function($q) use ($request) {
-                $q->where('alamat', 'like', '%' . $request->alamat . '%')
-                  ->orWhere('nama_kost', 'like', '%' . $request->alamat . '%');
-            });
-        }
-
-        // Filter berdasarkan ketersediaan kamar dan range harga
-        $query->whereHas('kamar', function($q) use ($request) {
-            $q->where('status', 'tersedia');
-            
-            // Terapkan filter harga jika ada
-            if ($request->has('harga_min')) {
-                $q->where('harga_per_bulan', '>=', $request->harga_min);
-            }
-            if ($request->has('harga_max')) {
-                $q->where('harga_per_bulan', '<=', $request->harga_max);
-            }
-        }, '>=', 1); // Pastikan ada minimal 1 kamar yang memenuhi kriteria
-
-        // Pastikan tidak ada kamar di luar range harga yang ditentukan
-        if ($request->has('harga_min') || $request->has('harga_max')) {
-            $query->whereDoesntHave('kamar', function($q) use ($request) {
-                if ($request->has('harga_min')) {
-                    $q->where('harga_per_bulan', '<', $request->harga_min);
-                }
-                if ($request->has('harga_max')) {
-                    $q->where('harga_per_bulan', '>', $request->harga_max);
-                }
-            });
-        }
-
-        // Load kost dengan kamar yang memenuhi kriteria
-        $kost = $query->with(['kamar' => function($q) use ($request) {
-            $q->where('status', 'tersedia');
-            if ($request->has('harga_min')) {
-                $q->where('harga_per_bulan', '>=', $request->harga_min);
-            }
-            if ($request->has('harga_max')) {
-                $q->where('harga_per_bulan', '<=', $request->harga_max);
-            }
-        }, 'pemilik:id_pengguna,nama,nomor_telepon'])
-        ->get();
-
-        // Jika tidak ada hasil pencarian
-        if ($kost->isEmpty()) {
-            $message = 'Tidak ditemukan kost';
-            $details = [];
-
+            // Filter berdasarkan alamat
             if ($request->has('alamat')) {
-                $details[] = "di lokasi '{$request->alamat}'";
-            }
-            if ($request->has('harga_min') && $request->has('harga_max')) {
-                $details[] = "dengan rentang harga Rp " . number_format($request->harga_min, 0, ',', '.') . 
-                           " - Rp " . number_format($request->harga_max, 0, ',', '.');
-            } elseif ($request->has('harga_min')) {
-                $details[] = "dengan harga minimal Rp " . number_format($request->harga_min, 0, ',', '.');
-            } elseif ($request->has('harga_max')) {
-                $details[] = "dengan harga maksimal Rp " . number_format($request->harga_max, 0, ',', '.');
+                $alamat = $request->alamat;
+                $query->where('alamat', 'like', "%{$alamat}%");
             }
 
-            if (!empty($details)) {
-                $message .= ' ' . implode(' ', $details);
+            // Filter berdasarkan nama kost
+            if ($request->has('nama_kost')) {
+                $nama = $request->nama_kost;
+                $query->where('nama_kost', 'like', "%{$nama}%");
             }
+
+            // Filter berdasarkan harga minimum
+            if ($request->has('harga_min')) {
+                $query->whereHas('kamar', function($q) use ($request) {
+                    $q->where('harga_per_bulan', '>=', $request->harga_min)
+                      ->where('status', 'tersedia');
+                });
+            }
+
+            // Filter berdasarkan harga maksimum
+            if ($request->has('harga_max')) {
+                $query->whereHas('kamar', function($q) use ($request) {
+                    $q->where('harga_per_bulan', '<=', $request->harga_max)
+                      ->where('status', 'tersedia');
+                });
+            }
+
+            // Filter berdasarkan ukuran kamar minimum
+            if ($request->has('ukuran_min')) {
+                $query->whereHas('kamar', function($q) use ($request) {
+                    $q->where('ukuran_kamar', '>=', $request->ukuran_min)
+                      ->where('status', 'tersedia');
+                });
+            }
+
+            // Filter berdasarkan fasilitas
+            if ($request->has('fasilitas')) {
+                $fasilitas = $request->fasilitas;
+                $query->whereHas('kamar', function($q) use ($fasilitas) {
+                    $q->where('fasilitas', 'like', "%{$fasilitas}%")
+                      ->where('status', 'tersedia');
+                });
+            }
+
+            // Load relasi yang diperlukan
+            $kost = $query->with(['kamar' => function($query) {
+                $query->where('status', 'tersedia');
+            }, 'pemilik:id_pengguna,nama,nomor_telepon'])
+            ->get()
+            ->map(function ($kost) {
+                return [
+                    'id_kost' => $kost->id_kost,
+                    'nama_kost' => $kost->nama_kost,
+                    'alamat' => $kost->alamat,
+                    'deskripsi' => $kost->deskripsi,
+                    'foto_utama' => $kost->foto_utama ? url('storage/' . $kost->foto_utama) : null,
+                    'status_aktif' => $kost->status_aktif,
+                    'pemilik' => $kost->pemilik,
+                    'kamar' => $kost->kamar->map(function ($kamar) {
+                        return [
+                            'id_kamar' => $kamar->id_kamar,
+                            'nomor_kamar' => $kamar->nomor_kamar,
+                            'harga_per_bulan' => $kamar->harga_per_bulan,
+                            'ukuran_kamar' => $kamar->ukuran_kamar,
+                            'status' => $kamar->status,
+                            'deskripsi' => $kamar->deskripsi,
+                            'fasilitas' => $kamar->fasilitas,
+                            'foto_kamar' => $kamar->foto_kamar ? url('storage/' . $kamar->foto_kamar) : null
+                        ];
+                    }),
+                    'created_at' => $kost->created_at,
+                    'updated_at' => $kost->updated_at
+                ];
+            });
 
             return response()->json([
-                'message' => $message,
-                'kost' => [],
-                'filters_applied' => [
-                    'alamat' => $request->alamat ?? null,
-                    'harga_min' => $request->harga_min ?? null,
-                    'harga_max' => $request->harga_max ?? null
-                ]
+                'message' => 'Hasil pencarian kost',
+                'total' => $kost->count(),
+                'kost' => $kost
             ]);
-        }
 
-        return response()->json([
-            'message' => 'Data kost berhasil diambil',
-            'total_found' => $kost->count(),
-            'filters_applied' => [
-                'alamat' => $request->alamat ?? null,
-                'harga_min' => $request->has('harga_min') ? (int)$request->harga_min : null,
-                'harga_max' => $request->has('harga_max') ? (int)$request->harga_max : null
-            ],
-            'kost' => $kost
-        ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Terjadi kesalahan saat mencari kost',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 } 

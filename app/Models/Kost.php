@@ -11,18 +11,20 @@ class Kost extends Model
 
     protected $table = 'kost';
     protected $primaryKey = 'id_kost';
+    public $incrementing = false; // Set to false since we're using manual IDs
 
     protected $fillable = [
+        'id_kost',
         'id_pemilik',
         'nama_kost',
         'alamat',
         'deskripsi',
         'foto_utama',
-        'status_aktif',
+        'status_aktif'
     ];
 
     protected $casts = [
-        'status_aktif' => 'boolean',
+        'status_aktif' => 'boolean'
     ];
 
     // Relasi dengan pemilik kost
