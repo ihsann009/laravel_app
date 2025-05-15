@@ -21,9 +21,7 @@ class KostController extends Controller
     public function index()
     {
         $user = Auth::user();
-        if ($user->role === 'admin') {
-            $kosts = Kost::with(['pemilik'])->get();
-        } else if ($user->role === 'pemilik_kost') {
+        if ($user->role === 'pemilik_kost') {
             $kosts = Kost::where('id_pemilik', $user->id_pengguna)
                         ->with(['pemilik'])
                         ->get();
@@ -49,7 +47,7 @@ class KostController extends Controller
     public function store(Request $request)
     {
         $user = Auth::user();
-        if ($user->role !== 'admin' && $user->role !== 'pemilik_kost') {
+        if ($user->role !== 'pemilik_kost') {
             return response()->json(['message' => 'Anda tidak memiliki akses untuk menambahkan kost'], 403);
         }
 
@@ -104,22 +102,7 @@ class KostController extends Controller
 
             return response()->json([
                 'message' => 'Kost berhasil ditambahkan',
-                'kost' => [
-                    'id_kost' => $kost->id_kost,
-                    'nama_kost' => $kost->nama_kost,
-                    'alamat' => $kost->alamat,
-                    'deskripsi' => $kost->deskripsi,
-                    'foto_utama' => $kost->foto_utama ? url('storage/' . $kost->foto_utama) : null,
-                    'harga_sewa' => $kost->harga_sewa,
-                    'status_kost' => $kost->status_kost,
-                    'pemilik' => $kost->pemilik ? [
-                        'id_pengguna' => $kost->pemilik->id_pengguna,
-                        'nama' => $kost->pemilik->nama,
-                        'nomor_telepon' => $kost->pemilik->nomor_telepon,
-                    ] : null,
-                    'created_at' => $kost->created_at,
-                    'updated_at' => $kost->updated_at
-                ]
+                'kost' => $kost
             ], 201);
 
         } catch (\Exception $e) {
@@ -135,36 +118,10 @@ class KostController extends Controller
     public function show($id)
     {
         try {
-            $user = Auth::user();
             $kost = Kost::with(['pemilik'])->findOrFail($id);
-            
-            // Cek akses berdasarkan role
-            if ($user->role === 'pemilik_kost' && $kost->id_pemilik !== $user->id_pengguna) {
-                return response()->json(['message' => 'Anda tidak memiliki akses untuk melihat kost ini'], 403);
-            }
-            
-            if ($user->role === 'penyewa' && $kost->status_kost !== 'tersedia') {
-                return response()->json(['message' => 'Kost tidak ditemukan'], 404);
-            }
-
             return response()->json([
                 'message' => 'Detail kost berhasil diambil',
-                'kost' => [
-                    'id_kost' => $kost->id_kost,
-                    'nama_kost' => $kost->nama_kost,
-                    'alamat' => $kost->alamat,
-                    'deskripsi' => $kost->deskripsi,
-                    'foto_utama' => $kost->foto_utama ? url('storage/' . $kost->foto_utama) : null,
-                    'harga_sewa' => $kost->harga_sewa,
-                    'status_kost' => $kost->status_kost,
-                    'pemilik' => $kost->pemilik ? [
-                        'id_pengguna' => $kost->pemilik->id_pengguna,
-                        'nama' => $kost->pemilik->nama,
-                        'nomor_telepon' => $kost->pemilik->nomor_telepon,
-                    ] : null,
-                    'created_at' => $kost->created_at,
-                    'updated_at' => $kost->updated_at
-                ]
+                'kost' => $kost
             ]);
         } catch (\Exception $e) {
             return response()->json(['message' => 'Kost tidak ditemukan'], 404);
@@ -179,11 +136,8 @@ class KostController extends Controller
             $kost = Kost::findOrFail($id);
 
             // Cek akses berdasarkan role
-            if ($user->role === 'pemilik_kost' && $kost->id_pemilik !== $user->id_pengguna) {
+            if ($user->role !== 'pemilik_kost' || $kost->id_pemilik !== $user->id_pengguna) {
                 return response()->json(['message' => 'Anda tidak memiliki akses untuk mengubah kost ini'], 403);
-            }
-            if ($user->role !== 'admin' && $user->role !== 'pemilik_kost') {
-                return response()->json(['message' => 'Anda tidak memiliki akses untuk mengubah kost'], 403);
             }
 
             $validator = Validator::make($request->all(), [
@@ -225,7 +179,7 @@ class KostController extends Controller
 
             return response()->json([
                 'message' => 'Data kost berhasil diperbarui',
-                'kost' => $kost
+                'kost' => $kost->load(['pemilik'])
             ]);
         } catch (\Exception $e) {
             return response()->json(['message' => 'Kost tidak ditemukan'], 404);
@@ -240,11 +194,8 @@ class KostController extends Controller
             $kost = Kost::findOrFail($id);
 
             // Cek akses berdasarkan role
-            if ($user->role === 'pemilik_kost' && $kost->id_pemilik !== $user->id_pengguna) {
+            if ($user->role !== 'pemilik_kost' || $kost->id_pemilik !== $user->id_pengguna) {
                 return response()->json(['message' => 'Anda tidak memiliki akses untuk menghapus kost ini'], 403);
-            }
-            if ($user->role !== 'admin' && $user->role !== 'pemilik_kost') {
-                return response()->json(['message' => 'Anda tidak memiliki akses untuk menghapus kost'], 403);
             }
 
             // Hapus foto jika ada
