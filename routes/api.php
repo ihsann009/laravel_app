@@ -32,6 +32,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [LoginController::class, 'logout']);
     Route::get('/me', [LoginController::class, 'me']);
 
+    // User Notifications
+    Route::get('/user/notifications', [UserController::class, 'indexNotifications']);
+    Route::post('/user/notifications/{notification_id}/mark-as-read', [UserController::class, 'markNotificationAsRead']);
+
     // Kost Management
     Route::get('/kost/all', [KostController::class, 'allKosts']);
     Route::get('/kost', [KostController::class, 'index']); // List kost (semua untuk penyewa, milik sendiri untuk pemilik)

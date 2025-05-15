@@ -6,6 +6,8 @@ use App\Models\Pengguna;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
+use App\Models\Notifikasi;
+use Carbon\Carbon;
 
 class UserController extends Controller
 {
@@ -79,5 +81,66 @@ class UserController extends Controller
         if (!$user || $user->role !== 'admin') {
             abort(403, 'Hanya admin yang boleh mengakses');
         }
+    }
+
+    // Mengambil notifikasi kustom untuk pengguna yang sedang login
+    public function indexNotifications(Request $request)
+    {
+        $user = Auth::user();
+        $limit = $request->query('limit', 15);
+        $unreadOnly = filter_var($request->query('unread', false), FILTER_VALIDATE_BOOLEAN);
+
+        $query = Notifikasi::where('id_pengguna', $user->id_pengguna);
+
+        if ($unreadOnly) {
+            $query->whereNull('dibaca_pada');
+        }
+
+        // Urutkan berdasarkan yang terbaru dulu dan terapkan limit
+        $notifikasiList = $query->orderBy('created_at', 'desc')->paginate($limit);
+
+        if ($notifikasiList->isEmpty()) {
+            return response()->json([
+                'message' => 'Tidak ada notifikasi untuk saat ini.',
+                'notifications' => []
+            ]);
+        }
+
+        // Format notifikasi untuk menghapus field 'link'
+        $formattedNotifications = $notifikasiList->map(function ($notifikasi) {
+            return [
+                'id' => $notifikasi->id,
+                'id_pengguna' => $notifikasi->id_pengguna,
+                'subjek' => $notifikasi->subjek,
+                'pesan' => $notifikasi->pesan,
+                'dibaca_pada' => $notifikasi->dibaca_pada,
+                'created_at' => $notifikasi->created_at,
+                'updated_at' => $notifikasi->updated_at,
+            ];
+        });
+
+        return response()->json([
+            'message' => 'Notifikasi berhasil diambil.',
+            'notifications' => $formattedNotifications->all() // Ambil array dari koleksi hasil map
+        ]);
+    }
+
+    // Menandai notifikasi kustom sebagai sudah dibaca
+    public function markNotificationAsRead(Request $request, $notification_id)
+    {
+        $user = Auth::user();
+        $notifikasi = Notifikasi::where('id', $notification_id)
+                                ->where('id_pengguna', $user->id_pengguna)
+                                ->first();
+
+        if ($notifikasi) {
+            if (is_null($notifikasi->dibaca_pada)) {
+                $notifikasi->dibaca_pada = Carbon::now();
+                $notifikasi->save();
+            }
+            return response()->json(['message' => 'Notifikasi ditandai sudah dibaca']);
+        }
+
+        return response()->json(['message' => 'Notifikasi tidak ditemukan atau Anda tidak berhak mengaksesnya'], 404);
     }
 } 

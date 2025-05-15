@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use App\Models\Notifikasi;
 
 class BookingController extends Controller
 {
@@ -362,7 +363,7 @@ class BookingController extends Controller
                 ], 422);
             }
 
-            $booking = Booking::with(['kost'])->findOrFail($id);
+            $booking = Booking::with(['kost', 'penyewa'])->findOrFail($id);
 
             // Cek apakah kost ini milik pemilik_kost (kecuali admin)
             if ($user->role === 'pemilik_kost' && $booking->kost->id_pemilik !== $user->id_pengguna) {
@@ -380,23 +381,60 @@ class BookingController extends Controller
 
             DB::beginTransaction();
 
+            $previousStatus = $booking->status;
+
             // Update status booking
             $booking->update([
                 'status' => $request->status,
                 'catatan' => $request->catatan
             ]);
 
-            // Jika booking diterima, update status kost
             if ($request->status === 'diterima') {
                 $booking->kost->update([
                     'status_kost' => 'terbooking'
                 ]);
+            } elseif ($previousStatus === 'diterima' && ($request->status === 'ditolak' || $request->status === 'batal')) {
+                $booking->kost->update([
+                    'status_kost' => 'tersedia'
+                ]);
+            }
+            
+            // Buat notifikasi kustom
+            if ($booking->penyewa) {
+                $subjekNotifikasi = '';
+                $pesanNotifikasi = '';
+                $linkNotifikasi = url('/bookings/' . $booking->id_booking); // Contoh link
+
+                switch ($request->status) {
+                    case 'diterima':
+                        $subjekNotifikasi = 'Booking Kost Diterima!';
+                        $pesanNotifikasi = "Booking Anda untuk kost {$booking->kost->nama_kost} telah diterima. Silakan lakukan pembayaran sesuai instruksi.";
+                        break;
+                    case 'ditolak':
+                        $subjekNotifikasi = 'Booking Kost Ditolak';
+                        $pesanNotifikasi = "Mohon maaf, booking Anda untuk kost {$booking->kost->nama_kost} telah ditolak.";
+                        if (!empty($booking->catatan)) {
+                            $pesanNotifikasi .= " Alasan: {$booking->catatan}.";
+                        }
+                        $pesanNotifikasi .= " Silakan cari kost lain atau hubungi pemilik.";
+                        break;
+                    // Anda bisa menambahkan case untuk status lain jika perlu, misal 'batal'
+                }
+
+                if (!empty($pesanNotifikasi)) {
+                    Notifikasi::create([
+                        'id_pengguna' => $booking->id_penyewa,
+                        'subjek' => $subjekNotifikasi,
+                        'pesan' => $pesanNotifikasi,
+                        'link' => $linkNotifikasi, // Simpan link jika ada
+                    ]);
+                }
             }
 
             DB::commit();
-
+            
             return response()->json([
-                'message' => 'Status booking berhasil diperbarui',
+                'message' => 'Status booking berhasil diperbarui dan notifikasi telah dibuat.',
                 'booking' => $booking->load(['kost', 'penyewa'])
             ]);
 

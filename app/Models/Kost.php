@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Storage;
 
 class Kost extends Model
 {
@@ -33,5 +34,18 @@ class Kost extends Model
     public function pemilik()
     {
         return $this->belongsTo(Pengguna::class, 'id_pemilik', 'id_pengguna');
+    }
+
+    /**
+     * Get the full URL for the kost's main photo.
+     *
+     * @return string|null
+     */
+    public function getFotoUtamaAttribute($value)
+    {
+        if ($value) {
+            return Storage::url($value);
+        }
+        return null;
     }
 } 
