@@ -22,42 +22,26 @@ class KostController extends Controller
     {
         $user = Auth::user();
         if ($user->role === 'admin') {
-            $kosts = Kost::with(['kamar', 'pemilik'])->get();
+            $kosts = Kost::with(['pemilik'])->get();
         } else if ($user->role === 'pemilik_kost') {
             $kosts = Kost::where('id_pemilik', $user->id_pengguna)
-                        ->with(['kamar', 'pemilik'])
+                        ->with(['pemilik'])
                         ->get();
         } else {
             $kosts = Kost::where('status_kost', 'tersedia')
-                        ->with(['kamar' => function($query) {
-                            $query->where('status', 'tersedia');
-                        }, 'pemilik'])
+                        ->with(['pemilik'])
                         ->get();
         }
 
-        $kost = $kosts->map(function ($kost) {
-            return [
-                'id_kost' => $kost->id_kost,
-                'nama_kost' => $kost->nama_kost,
-                'alamat' => $kost->alamat,
-                'deskripsi' => $kost->deskripsi,
-                'foto_utama' => $kost->foto_utama ? url('storage/' . $kost->foto_utama) : null,
-                'harga_sewa' => $kost->harga_sewa,
-                'status_kost' => $kost->status_kost,
-                'pemilik' => $kost->pemilik ? [
-                    'id_pengguna' => $kost->pemilik->id_pengguna,
-                    'nama' => $kost->pemilik->nama,
-                    'nomor_telepon' => $kost->pemilik->nomor_telepon,
-                ] : null,
-                'kamar' => $kost->kamar,
-                'created_at' => $kost->created_at,
-                'updated_at' => $kost->updated_at
-            ];
-        });
-
+        if ($kosts->isEmpty()) {
+            return response()->json([
+                'message' => 'Kost belum ada',
+                'kost' => []
+            ]);
+        }
         return response()->json([
             'message' => 'Data kost berhasil diambil',
-            'kost' => $kost
+            'kost' => $kosts
         ]);
     }
 
@@ -152,7 +136,7 @@ class KostController extends Controller
     {
         try {
             $user = Auth::user();
-            $kost = Kost::with(['kamar', 'pemilik'])->findOrFail($id);
+            $kost = Kost::with(['pemilik'])->findOrFail($id);
             
             // Cek akses berdasarkan role
             if ($user->role === 'pemilik_kost' && $kost->id_pemilik !== $user->id_pengguna) {
@@ -178,7 +162,6 @@ class KostController extends Controller
                         'nama' => $kost->pemilik->nama,
                         'nomor_telepon' => $kost->pemilik->nomor_telepon,
                     ] : null,
-                    'kamar' => $kost->kamar,
                     'created_at' => $kost->created_at,
                     'updated_at' => $kost->updated_at
                 ]
@@ -314,45 +297,12 @@ class KostController extends Controller
             }
 
             // Load relasi yang diperlukan
-            $kosts = $query->with(['kamar' => function($query) {
-                $query->where('status', 'tersedia');
-            }, 'pemilik'])->get();
-
-            $kost = $kosts->map(function ($kost) {
-                return [
-                    'id_kost' => $kost->id_kost,
-                    'nama_kost' => $kost->nama_kost,
-                    'alamat' => $kost->alamat,
-                    'deskripsi' => $kost->deskripsi,
-                    'foto_utama' => $kost->foto_utama ? url('storage/' . $kost->foto_utama) : null,
-                    'harga_sewa' => $kost->harga_sewa,
-                    'status_kost' => $kost->status_kost,
-                    'pemilik' => $kost->pemilik ? [
-                        'id_pengguna' => $kost->pemilik->id_pengguna,
-                        'nama' => $kost->pemilik->nama,
-                        'nomor_telepon' => $kost->pemilik->nomor_telepon,
-                    ] : null,
-                    'kamar' => $kost->kamar->map(function ($kamar) {
-                        return [
-                            'id_kamar' => $kamar->id_kamar,
-                            'nomor_kamar' => $kamar->nomor_kamar,
-                            'harga_per_bulan' => $kamar->harga_per_bulan,
-                            'ukuran_kamar' => $kamar->ukuran_kamar,
-                            'status' => $kamar->status,
-                            'deskripsi' => $kamar->deskripsi,
-                            'fasilitas' => $kamar->fasilitas,
-                            'foto_kamar' => $kamar->foto_kamar ? url('storage/' . $kamar->foto_kamar) : null
-                        ];
-                    }),
-                    'created_at' => $kost->created_at,
-                    'updated_at' => $kost->updated_at
-                ];
-            });
+            $kosts = $query->with(['pemilik'])->get();
 
             return response()->json([
                 'message' => 'Hasil pencarian kost',
-                'total' => $kost->count(),
-                'kost' => $kost
+                'total' => $kosts->count(),
+                'kost' => $kosts
             ]);
 
         } catch (\Exception $e) {
@@ -361,5 +311,21 @@ class KostController extends Controller
                 'error' => $e->getMessage()
             ], 500);
         }
+    }
+
+    // Endpoint untuk menampilkan semua kost tanpa filter
+    public function allKosts()
+    {
+        $kosts = Kost::all();
+        if ($kosts->isEmpty()) {
+            return response()->json([
+                'message' => 'Kost belum ada',
+                'kost' => []
+            ]);
+        }
+        return response()->json([
+            'message' => 'Semua data kost berhasil diambil',
+            'kost' => $kosts
+        ]);
     }
 } 

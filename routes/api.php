@@ -33,6 +33,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [LoginController::class, 'me']);
 
     // Kost Management
+    Route::get('/kost/all', [KostController::class, 'allKosts']);
     Route::get('/kost', [KostController::class, 'index']); // List kost (semua untuk penyewa, milik sendiri untuk pemilik)
     Route::get('/kost/search', [KostController::class, 'search']);
     Route::post('/kost', [KostController::class, 'store']); // Tambah kost baru
@@ -40,6 +41,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/kost/{id}', [KostController::class, 'update']); // Update kost
     Route::delete('/kost/{id}', [KostController::class, 'destroy']); // Hapus kost
 
+    // Booking Management
+    Route::get('/bookings', [BookingController::class, 'index']); // List bookings (untuk penyewa)
+    
     // Booking Management (untuk pemilik kost)
     Route::get('/bookings/owner', [BookingController::class, 'indexForOwner']); // List semua booking untuk pemilik
     

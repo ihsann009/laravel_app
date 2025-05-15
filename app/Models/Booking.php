@@ -15,7 +15,7 @@ class Booking extends Model
 
     protected $fillable = [
         'id_booking',
-        'id_kamar',
+        'id_kost',
         'id_penyewa',
         'tanggal_mulai',
         'tanggal_selesai',
@@ -30,10 +30,10 @@ class Booking extends Model
         'total_harga' => 'decimal:2'
     ];
 
-    // Relasi dengan kamar
-    public function kamar()
+    // Relasi dengan kost
+    public function kost()
     {
-        return $this->belongsTo(Kamar::class, 'id_kamar', 'id_kamar');
+        return $this->belongsTo(Kost::class, 'id_kost', 'id_kost');
     }
 
     // Relasi dengan penyewa

@@ -26,15 +26,21 @@ class UlasanController extends Controller
         $user = Auth::user();
         $booking = Booking::where('id_booking', $request->id_booking)
             ->where('id_penyewa', $user->id_pengguna)
-            ->where('id_kamar', function($q) use ($request) {
-                $q->select('id_kamar')
-                  ->from('kamar')
-                  ->where('id_kost', $request->id_kost);
-            })
+            ->where('id_kost', $request->id_kost)
             ->first();
 
         if (!$booking) {
             return response()->json(['message' => 'Anda hanya bisa mengulas kost yang sudah Anda booking'], 403);
+        }
+
+        // Batasi user hanya bisa mengulas satu kali per kost
+        $sudahUlas = Ulasan::where('id_kost', $request->id_kost)
+            ->where('id_user', $user->id_pengguna)
+            ->exists();
+        if ($sudahUlas) {
+            return response()->json([
+                'message' => 'Anda sudah pernah mengulas kost ini. Setiap pengguna hanya boleh mengulas satu kali per kost.'
+            ], 422);
         }
 
         $ulasan = Ulasan::create([

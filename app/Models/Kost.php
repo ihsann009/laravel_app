@@ -34,10 +34,4 @@ class Kost extends Model
     {
         return $this->belongsTo(Pengguna::class, 'id_pemilik', 'id_pengguna');
     }
-
-    // Relasi dengan kamar
-    public function kamar()
-    {
-        return $this->hasMany(Kamar::class, 'id_kost');
-    }
 } 
