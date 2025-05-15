@@ -17,24 +17,39 @@ class RegisterController extends Controller
             'nama' => 'required|string|max:100',
             'email' => 'required|string|email|max:100|unique:pengguna',
             'password' => 'required|string|min:8|confirmed',
-            'nomor_telepon' => 'required|string|max:15',
+            'nomor_telepon' => 'required|string|max:15|regex:/^[0-9]+$/',
             'alamat' => 'nullable|string',
+        ];
+    }
+
+    protected function getValidationMessages()
+    {
+        return [
+            'nama.required' => 'Nama harus diisi',
+            'nama.max' => 'Nama maksimal 100 karakter',
+            'email.required' => 'Email harus diisi',
+            'email.email' => 'Format email tidak valid',
+            'email.max' => 'Email maksimal 100 karakter',
+            'email.unique' => 'Email sudah terdaftar',
+            'password.required' => 'Password harus diisi',
+            'password.min' => 'Password minimal 8 karakter',
+            'password.confirmed' => 'Konfirmasi password tidak sesuai',
+            'nomor_telepon.required' => 'Nomor telepon harus diisi',
+            'nomor_telepon.max' => 'Nomor telepon maksimal 15 karakter',
+            'nomor_telepon.regex' => 'Masukkan nomor telepon yang valid',
         ];
     }
 
     // Registrasi untuk penyewa
     public function registerPenyewa(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'nama' => 'required|string|max:100',
-            'email' => 'required|string|email|max:100|unique:pengguna',
-            'password' => 'required|string|min:8|confirmed',
-            'nomor_telepon' => 'required|string|max:15',
-            'alamat' => 'nullable|string',
-        ]);
+        $validator = Validator::make($request->all(), $this->baseValidationRules(), $this->getValidationMessages());
 
         if ($validator->fails()) {
-            return response()->json($validator->errors(), 422);
+            return response()->json([
+                'message' => 'Validasi gagal',
+                'errors' => $validator->errors()
+            ], 422);
         }
 
         $pengguna = Pengguna::create([
@@ -55,16 +70,17 @@ class RegisterController extends Controller
     // Registrasi untuk pemilik kost
     public function registerPemilikKost(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'nama' => 'required|string|max:100',
-            'email' => 'required|string|email|max:100|unique:pengguna',
-            'password' => 'required|string|min:8|confirmed',
-            'nomor_telepon' => 'required|string|max:15',
+        $validator = Validator::make($request->all(), array_merge($this->baseValidationRules(), [
             'alamat' => 'required|string',
-        ]);
+        ]), array_merge($this->getValidationMessages(), [
+            'alamat.required' => 'Alamat harus diisi',
+        ]));
 
         if ($validator->fails()) {
-            return response()->json($validator->errors(), 422);
+            return response()->json([
+                'message' => 'Validasi gagal',
+                'errors' => $validator->errors()
+            ], 422);
         }
 
         $pengguna = Pengguna::create([
@@ -86,10 +102,13 @@ class RegisterController extends Controller
     // Registrasi untuk admin (protected by middleware)
     public function registerAdmin(Request $request)
     {
-        $validator = Validator::make($request->all(), $this->baseValidationRules());
+        $validator = Validator::make($request->all(), $this->baseValidationRules(), $this->getValidationMessages());
 
         if ($validator->fails()) {
-            return response()->json($validator->errors(), 422);
+            return response()->json([
+                'message' => 'Validasi gagal',
+                'errors' => $validator->errors()
+            ], 422);
         }
 
         $pengguna = Pengguna::create([

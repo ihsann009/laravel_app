@@ -7,22 +7,47 @@ use App\Models\Pengguna;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Validator;
 
 class LoginController extends Controller
 {
     public function login(Request $request)
     {
-        $request->validate([
+        $validator = Validator::make($request->all(), [
             'email' => 'required|email',
-            'password' => 'required',
+            'password' => 'required|min:8',
+        ], [
+            'email.required' => 'Email harus diisi',
+            'email.email' => 'Format email tidak valid',
+            'password.required' => 'Password harus diisi',
+            'password.min' => 'Password minimal 8 karakter'
         ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Validasi gagal',
+                'errors' => $validator->errors()
+            ], 422);
+        }
 
         $pengguna = Pengguna::where('email', $request->email)->first();
 
         if (!$pengguna || !Hash::check($request->password, $pengguna->password)) {
-            throw ValidationException::withMessages([
-                'email' => ['Email atau password salah.'],
-            ]);
+            return response()->json([
+                'message' => 'Login gagal',
+                'errors' => [
+                    'email' => ['Email atau password salah']
+                ]
+            ], 401);
+        }
+
+        if (!$pengguna->is_verified && $pengguna->role === 'pemilik_kost') {
+            return response()->json([
+                'message' => 'Akun belum diverifikasi',
+                'errors' => [
+                    'email' => ['Akun Anda belum diverifikasi oleh admin. Silakan tunggu verifikasi.']
+                ]
+            ], 403);
         }
 
         // Hapus token lama jika ada

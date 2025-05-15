@@ -1,6 +1,7 @@
 {
   "info": {
-    "name": "Kost API",
+    "name": "Kost API (Sesuai Use Case)",
+    "description": "Koleksi endpoint API sesuai use case diagram aplikasi sewa kost. Penyewa: register, login, lihat kost, booking, ulasan. Admin: login, CRUD user, CRUD kost, lihat booking.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -15,35 +16,8 @@
         "body": {
           "mode": "raw",
           "raw": "{\n  \"nama\": \"Budi\",\n  \"email\": \"budi@example.com\",\n  \"password\": \"password123\",\n  \"password_confirmation\": \"password123\",\n  \"nomor_telepon\": \"08123456789\",\n  \"alamat\": \"Jl. Mawar 1\"\n}"
-        }
-      }
-    },
-    {
-      "name": "Register Pemilik Kost",
-      "request": {
-        "method": "POST",
-        "header": [
-          { "key": "Content-Type", "value": "application/json", "type": "text" }
-        ],
-        "url": "{{base_url}}/api/register/pemilik-kost",
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"nama\": \"Siti\",\n  \"email\": \"siti@example.com\",\n  \"password\": \"password123\",\n  \"password_confirmation\": \"password123\",\n  \"nomor_telepon\": \"08123456780\",\n  \"alamat\": \"Jl. Melati 2\"\n}"
-        }
-      }
-    },
-    {
-      "name": "Register Admin",
-      "request": {
-        "method": "POST",
-        "header": [
-          { "key": "Content-Type", "value": "application/json", "type": "text" }
-        ],
-        "url": "{{base_url}}/api/register/admin",
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"nama\": \"Admin\",\n  \"email\": \"admin@example.com\",\n  \"password\": \"admin123456\",\n  \"password_confirmation\": \"admin123456\",\n  \"nomor_telepon\": \"08123456781\",\n  \"alamat\": \"Jl. Admin 3\"\n}"
-        }
+        },
+        "description": "Registrasi akun penyewa."
       }
     },
     {
@@ -57,137 +31,28 @@
         "body": {
           "mode": "raw",
           "raw": "{\n  \"email\": \"budi@example.com\",\n  \"password\": \"password123\"\n}"
-        }
-      }
-    },
-    {
-      "name": "Cari Kost (Public)",
-      "request": {
-        "method": "GET",
-        "url": "{{base_url}}/api/kost/search"
+        },
+        "description": "Login user/admin."
       }
     },
     {
       "name": "List Kost",
       "request": {
         "method": "GET",
-        "header": [
-          { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }
-        ],
-        "url": "{{base_url}}/api/kost"
-      }
-    },
-    {
-      "name": "Tambah Kost",
-      "request": {
-        "method": "POST",
-        "header": [
-          { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" },
-          { "key": "Content-Type", "value": "application/json", "type": "text" }
-        ],
         "url": "{{base_url}}/api/kost",
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"nama_kost\": \"Kost Mawar\",\n  \"alamat\": \"Jl. Mawar 1\",\n  \"deskripsi\": \"Kost nyaman\",\n  \"fasilitas\": \"WiFi, Parkir, Dapur\"\n}"
-        }
+        "description": "Lihat daftar kost."
       }
     },
     {
       "name": "Detail Kost",
       "request": {
         "method": "GET",
-        "url": "{{base_url}}/api/kost/1"
-      }
-    },
-    {
-      "name": "Update Kost",
-      "request": {
-        "method": "PUT",
-        "header": [
-          { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" },
-          { "key": "Content-Type", "value": "application/json", "type": "text" }
-        ],
         "url": "{{base_url}}/api/kost/1",
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"nama_kost\": \"Kost Mawar Update\",\n  \"alamat\": \"Jl. Mawar 1\",\n  \"deskripsi\": \"Kost nyaman dan bersih\",\n  \"fasilitas\": \"WiFi, Parkir, Dapur, AC\",\n  \"status_aktif\": true\n}"
-        }
+        "description": "Lihat detail kost."
       }
     },
     {
-      "name": "Hapus Kost",
-      "request": {
-        "method": "DELETE",
-        "url": "{{base_url}}/api/kost/1"
-      }
-    },
-    {
-      "name": "List Kamar",
-      "request": {
-        "method": "GET",
-        "url": "{{base_url}}/api/kost/1/kamar"
-      }
-    },
-    {
-      "name": "Tambah Kamar",
-      "request": {
-        "method": "POST",
-        "header": [
-          { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" },
-          { "key": "Content-Type", "value": "application/json", "type": "text" }
-        ],
-        "url": "{{base_url}}/api/kost/1/kamar",
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"nomor_kamar\": \"A1\",\n  \"harga_per_bulan\": 1000000,\n  \"ukuran_kamar\": \"3x3\",\n  \"deskripsi\": \"Kamar luas\"\n}"
-        }
-      }
-    },
-    {
-      "name": "Detail Kamar",
-      "request": {
-        "method": "GET",
-        "url": "{{base_url}}/api/kost/1/kamar/1"
-      }
-    },
-    {
-      "name": "Update Kamar",
-      "request": {
-        "method": "PUT",
-        "header": [
-          { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" },
-          { "key": "Content-Type", "value": "application/json", "type": "text" }
-        ],
-        "url": "{{base_url}}/api/kost/1/kamar/1",
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"nomor_kamar\": \"A1\",\n  \"harga_per_bulan\": 1200000,\n  \"ukuran_kamar\": \"3x3\",\n  \"status\": \"tersedia\",\n  \"deskripsi\": \"Kamar luas dan bersih\"\n}"
-        }
-      }
-    },
-    {
-      "name": "Hapus Kamar",
-      "request": {
-        "method": "DELETE",
-        "url": "{{base_url}}/api/kost/1/kamar/1"
-      }
-    },
-    {
-      "name": "List Booking Owner",
-      "request": {
-        "method": "GET",
-        "url": "{{base_url}}/api/bookings/owner"
-      }
-    },
-    {
-      "name": "List Booking Saya",
-      "request": {
-        "method": "GET",
-        "url": "{{base_url}}/api/bookings/my"
-      }
-    },
-    {
-      "name": "Buat Booking",
+      "name": "Booking Kost",
       "request": {
         "method": "POST",
         "header": [
@@ -197,79 +62,9 @@
         "url": "{{base_url}}/api/bookings",
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"id_kamar\": 1,\n  \"tanggal_mulai\": \"2024-06-01\",\n  \"tanggal_selesai\": \"2024-06-30\"\n}"
-        }
-      }
-    },
-    {
-      "name": "Cari Booking",
-      "request": {
-        "method": "GET",
-        "url": "{{base_url}}/api/bookings/search"
-      }
-    },
-    {
-      "name": "Detail Booking",
-      "request": {
-        "method": "GET",
-        "url": "{{base_url}}/api/bookings/1"
-      }
-    },
-    {
-      "name": "Update Status Booking",
-      "request": {
-        "method": "PUT",
-        "header": [
-          { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" },
-          { "key": "Content-Type", "value": "application/json", "type": "text" }
-        ],
-        "url": "{{base_url}}/api/bookings/1/status",
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"status\": \"diterima\"\n}"
-        }
-      }
-    },
-    {
-      "name": "User Info",
-      "request": {
-        "method": "GET",
-        "url": "{{base_url}}/api/user"
-      }
-    },
-    {
-      "name": "Logout",
-      "request": {
-        "method": "POST",
-        "url": "{{base_url}}/api/logout"
-      }
-    },
-    {
-      "name": "User Info (Detail)",
-      "request": {
-        "method": "GET",
-        "url": "{{base_url}}/api/me"
-      }
-    },
-    {
-      "name": "List Unverified Owners (Admin)",
-      "request": {
-        "method": "GET",
-        "url": "{{base_url}}/api/admin/unverified-owners"
-      }
-    },
-    {
-      "name": "Verifikasi Owner (Admin)",
-      "request": {
-        "method": "POST",
-        "url": "{{base_url}}/api/admin/verify-owner/1"
-      }
-    },
-    {
-      "name": "Unverifikasi Owner (Admin)",
-      "request": {
-        "method": "POST",
-        "url": "{{base_url}}/api/admin/unverify-owner/1"
+          "raw": "{\n  \"id_kost\": 1,\n  \"tanggal_mulai\": \"2024-06-01\",\n  \"tanggal_selesai\": \"2024-06-30\"\n}"
+        },
+        "description": "Booking kost (penyewa)."
       }
     },
     {
@@ -284,7 +79,111 @@
         "body": {
           "mode": "raw",
           "raw": "{\n  \"id_kost\": 1,\n  \"id_booking\": 2,\n  \"rating\": 5,\n  \"komentar\": \"Kostnya nyaman!\"\n}"
-        }
+        },
+        "description": "Memberi ulasan ke kost yang sudah dibooking."
+      }
+    },
+    {
+      "name": "List User (Admin)",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }
+        ],
+        "url": "{{base_url}}/api/user",
+        "description": "List semua user (admin)."
+      }
+    },
+    {
+      "name": "Detail User (Admin)",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }
+        ],
+        "url": "{{base_url}}/api/user/1",
+        "description": "Detail user (admin)."
+      }
+    },
+    {
+      "name": "Update User (Admin)",
+      "request": {
+        "method": "PUT",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" },
+          { "key": "Content-Type", "value": "application/json", "type": "text" }
+        ],
+        "url": "{{base_url}}/api/user/1",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nama\": \"Budi Update\",\n  \"email\": \"budiupdate@example.com\",\n  \"nomor_telepon\": \"08123456789\",\n  \"alamat\": \"Jl. Mawar 1\",\n  \"role\": \"penyewa\"\n}"
+        },
+        "description": "Update user (admin)."
+      }
+    },
+    {
+      "name": "Hapus User (Admin)",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }
+        ],
+        "url": "{{base_url}}/api/user/1",
+        "description": "Hapus user (admin)."
+      }
+    },
+    {
+      "name": "List Booking (Admin)",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }
+        ],
+        "url": "{{base_url}}/api/bookings",
+        "description": "Lihat daftar booking (admin)."
+      }
+    },
+    {
+      "name": "Tambah Kost (Admin)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" },
+          { "key": "Content-Type", "value": "application/json", "type": "text" }
+        ],
+        "url": "{{base_url}}/api/kost",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nama_kost\": \"Kost Mawar\",\n  \"alamat\": \"Jl. Mawar 1\",\n  \"deskripsi\": \"Kost nyaman\",\n  \"fasilitas\": \"WiFi, Parkir, Dapur\"\n}"
+        },
+        "description": "Tambah kost (admin)."
+      }
+    },
+    {
+      "name": "Update Kost (Admin)",
+      "request": {
+        "method": "PUT",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" },
+          { "key": "Content-Type", "value": "application/json", "type": "text" }
+        ],
+        "url": "{{base_url}}/api/kost/1",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nama_kost\": \"Kost Mawar Update\",\n  \"alamat\": \"Jl. Mawar 1\",\n  \"deskripsi\": \"Kost nyaman dan bersih\",\n  \"fasilitas\": \"WiFi, Parkir, Dapur, AC\",\n  \"status_aktif\": true\n}"
+        },
+        "description": "Update kost (admin)."
+      }
+    },
+    {
+      "name": "Hapus Kost (Admin)",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }
+        ],
+        "url": "{{base_url}}/api/kost/1",
+        "description": "Hapus kost (admin)."
       }
     }
   ]

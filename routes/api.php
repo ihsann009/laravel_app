@@ -11,6 +11,7 @@ use App\Http\Controllers\KamarController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\Admin\VerificationController;
 use App\Http\Controllers\UlasanController;
+use App\Http\Controllers\UserController;
 
 // Authentication Routes
 Route::post('/register', [RegisterController::class, 'registerPenyewa']);
@@ -39,13 +40,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/kost/{id}', [KostController::class, 'update']); // Update kost
     Route::delete('/kost/{id}', [KostController::class, 'destroy']); // Hapus kost
 
-    // Kamar Management
-    Route::get('/kost/{kostId}/kamar', [KamarController::class, 'index']); // List kamar
-    Route::post('/kost/{kostId}/kamar', [KamarController::class, 'store']); // Tambah kamar
-    Route::get('/kost/{kostId}/kamar/{kamarId}', [KamarController::class, 'show']); // Detail kamar
-    Route::put('/kost/{kostId}/kamar/{kamarId}', [KamarController::class, 'update']); // Update kamar
-    Route::delete('/kost/{kostId}/kamar/{kamarId}', [KamarController::class, 'destroy']); // Hapus kamar
-
     // Booking Management (untuk pemilik kost)
     Route::get('/bookings/owner', [BookingController::class, 'indexForOwner']); // List semua booking untuk pemilik
     
@@ -59,6 +53,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/bookings/{id}/status', [BookingController::class, 'updateStatus']); // Update status booking
 
     Route::post('/ulasan', [UlasanController::class, 'store']);
+
+    Route::get('/user', [UserController::class, 'index']);
+    Route::get('/user/{id}', [UserController::class, 'show']);
+    Route::put('/user/{id}', [UserController::class, 'update']);
+    Route::delete('/user/{id}', [UserController::class, 'destroy']);
 });
 
 // Routes untuk verifikasi pemilik kost (admin only)
