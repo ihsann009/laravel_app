@@ -154,7 +154,7 @@
         "url": "{{base_url}}/api/kost",
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"nama_kost\": \"Kost Mawar\",\n  \"alamat\": \"Jl. Mawar 1\",\n  \"deskripsi\": \"Kost nyaman\",\n  \"fasilitas\": \"WiFi, Parkir, Dapur\"\n}"
+          "raw": "{\n  \"nama_kost\": \"Kost Mawar\",\n  \"alamat\": \"Jl. Mawar 1\",\n  \"deskripsi\": \"Kost nyaman\",\n  \"fasilitas\": \"WiFi, Parkir, Dapur\",\n  \"harga_sewa\": 1500000,\n  \"status_kost\": \"tersedia\"\n}"
         },
         "description": "Tambah kost (admin)."
       }
@@ -170,7 +170,7 @@
         "url": "{{base_url}}/api/kost/1",
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"nama_kost\": \"Kost Mawar Update\",\n  \"alamat\": \"Jl. Mawar 1\",\n  \"deskripsi\": \"Kost nyaman dan bersih\",\n  \"fasilitas\": \"WiFi, Parkir, Dapur, AC\",\n  \"status_aktif\": true\n}"
+          "raw": "{\n  \"nama_kost\": \"Kost Mawar Update\",\n  \"alamat\": \"Jl. Mawar 1\",\n  \"deskripsi\": \"Kost nyaman dan bersih\",\n  \"fasilitas\": \"WiFi, Parkir, Dapur, AC\",\n  \"harga_sewa\": 2000000,\n  \"status_kost\": \"tersedia\"\n}"
         },
         "description": "Update kost (admin)."
       }

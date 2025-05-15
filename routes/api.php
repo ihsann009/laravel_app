@@ -59,10 +59,3 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/user/{id}', [UserController::class, 'update']);
     Route::delete('/user/{id}', [UserController::class, 'destroy']);
 });
-
-// Routes untuk verifikasi pemilik kost (admin only)
-Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
-    Route::get('/admin/unverified-owners', [VerificationController::class, 'getUnverifiedOwners']);
-    Route::post('/admin/verify-owner/{id_pengguna}', [VerificationController::class, 'verifyOwner']);
-    Route::post('/admin/unverify-owner/{id_pengguna}', [VerificationController::class, 'unverifyOwner']);
-});

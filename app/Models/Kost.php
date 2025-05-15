@@ -20,11 +20,13 @@ class Kost extends Model
         'deskripsi',
         'fasilitas',
         'foto_utama',
-        'status_aktif'
+        'harga_sewa',
+        'status_kost'
     ];
 
     protected $casts = [
-        'status_aktif' => 'boolean'
+        'harga_sewa' => 'decimal:2',
+        'status_kost' => 'string'
     ];
 
     // Relasi dengan pemilik kost

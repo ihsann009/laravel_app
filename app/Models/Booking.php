@@ -21,7 +21,6 @@ class Booking extends Model
         'tanggal_selesai',
         'status',
         'total_harga',
-        'bukti_pembayaran',
         'catatan'
     ];
 

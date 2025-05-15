@@ -90,11 +90,10 @@ class RegisterController extends Controller
             'nomor_telepon' => $request->nomor_telepon,
             'alamat' => $request->alamat,
             'role' => 'pemilik_kost',
-            'is_verified' => false,
         ]);
 
         return response()->json([
-            'message' => 'Registrasi pemilik kost berhasil, silakan login setelah akun diverifikasi admin',
+            'message' => 'Registrasi pemilik kost berhasil, silakan login',
             'user' => $pengguna
         ], 201);
     }

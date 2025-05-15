@@ -13,10 +13,9 @@ return new class extends Migration
             $table->string('nama', 100);
             $table->string('email', 100)->unique();
             $table->string('password');
-            $table->enum('role', ['penyewa', 'admin'])->default('penyewa');
+            $table->enum('role', ['penyewa','pemilik_kost', 'admin'])->default('penyewa');
             $table->string('nomor_telepon', 15);
             $table->text('alamat')->nullable();
-            $table->boolean('is_verified')->default(false);
             $table->rememberToken();
             $table->timestamps();
         });

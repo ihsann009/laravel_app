@@ -9,12 +9,12 @@ use Illuminate\Support\Facades\Validator;
 
 class UserController extends Controller
 {
-    // List semua user
+    // List semua user kecuali admin
     public function index()
     {
         $this->authorizeAdmin();
         return response()->json([
-            'users' => Pengguna::all()
+            'users' => Pengguna::where('role', '!=', 'admin')->get()
         ]);
     }
 
@@ -23,6 +23,12 @@ class UserController extends Controller
     {
         $this->authorizeAdmin();
         $user = Pengguna::findOrFail($id);
+        
+        // Jika user yang dicari adalah admin, return 404
+        if ($user->role === 'admin') {
+            return response()->json(['message' => 'User tidak ditemukan'], 404);
+        }
+        
         return response()->json(['user' => $user]);
     }
 
@@ -31,6 +37,12 @@ class UserController extends Controller
     {
         $this->authorizeAdmin();
         $user = Pengguna::findOrFail($id);
+        
+        // Jika user yang akan diupdate adalah admin, return 403
+        if ($user->role === 'admin') {
+            return response()->json(['message' => 'Tidak dapat mengupdate data admin'], 403);
+        }
+        
         $validator = Validator::make($request->all(), [
             'nama' => 'sometimes|required|string|max:100',
             'email' => 'sometimes|required|email|max:100|unique:pengguna,email,' . $id . ',id_pengguna',
@@ -50,6 +62,12 @@ class UserController extends Controller
     {
         $this->authorizeAdmin();
         $user = Pengguna::findOrFail($id);
+        
+        // Jika user yang akan dihapus adalah admin, return 403
+        if ($user->role === 'admin') {
+            return response()->json(['message' => 'Tidak dapat menghapus data admin'], 403);
+        }
+        
         $user->delete();
         return response()->json(['message' => 'User berhasil dihapus']);
     }

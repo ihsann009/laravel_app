@@ -1,14 +1,13 @@
 {
 	"info": {
-		"_postman_id": "a1b2c3d4-e5f6-g7h8-i9j0-k1l2m3n4o5p6",
-		"name": "Kost Booking System API",
-		"description": "API untuk sistem booking kost (rumah kos) yang memungkinkan pemilik kost mengelola properti mereka dan penyewa melakukan booking.\n\nFitur utama:\n- Autentikasi untuk pemilik kost dan penyewa\n- Manajemen kost dan kamar\n- Sistem booking\n- Pencarian kost\n\nBase URL: http://localhost:8000/api",
+		"_postman_id": "a1b2c3d4-e5f6-7890",
+		"name": "Kost API",
+		"description": "API untuk manajemen kost",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
 		{
 			"name": "Authentication",
-			"description": "Endpoint untuk autentikasi pengguna",
 			"item": [
 				{
 					"name": "Register Penyewa",
@@ -19,23 +18,23 @@
 								"key": "Accept",
 								"value": "application/json",
 								"type": "text"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
 							}
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"nama\": \"John Doe\",\n    \"email\": \"john@example.com\",\n    \"password\": \"password123\",\n    \"nomor_telepon\": \"08123456789\"\n}"
+							"raw": "{\n    \"nama\": \"John Doe\",\n    \"email\": \"john@example.com\",\n    \"password\": \"password123\",\n    \"nomor_telepon\": \"081234567890\",\n    \"alamat\": \"Jl. Contoh No. 123\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
 						},
 						"url": {
 							"raw": "{{base_url}}/register",
 							"host": ["{{base_url}}"],
 							"path": ["register"]
 						},
-						"description": "Mendaftarkan pengguna baru sebagai penyewa kost"
+						"description": "Mendaftarkan pengguna baru sebagai penyewa"
 					}
 				},
 				{
@@ -47,16 +46,16 @@
 								"key": "Accept",
 								"value": "application/json",
 								"type": "text"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
 							}
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"nama\": \"Jane Smith\",\n    \"email\": \"jane@example.com\",\n    \"password\": \"password123\",\n    \"nomor_telepon\": \"08123456790\"\n}"
+							"raw": "{\n    \"nama\": \"Jane Doe\",\n    \"email\": \"jane@example.com\",\n    \"password\": \"password123\",\n    \"nomor_telepon\": \"081234567891\",\n    \"alamat\": \"Jl. Contoh No. 456\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
 						},
 						"url": {
 							"raw": "{{base_url}}/register/pemilik-kost",
@@ -68,20 +67,6 @@
 				},
 				{
 					"name": "Login",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"var jsonData = pm.response.json();",
-									"if (jsonData.token) {",
-									"    pm.environment.set(\"token\", jsonData.token);",
-									"}"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
 					"request": {
 						"method": "POST",
 						"header": [
@@ -89,23 +74,23 @@
 								"key": "Accept",
 								"value": "application/json",
 								"type": "text"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
 							}
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"email\": \"john@example.com\",\n    \"password\": \"password123\"\n}"
+							"raw": "{\n    \"email\": \"john@example.com\",\n    \"password\": \"password123\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
 						},
 						"url": {
 							"raw": "{{base_url}}/login",
 							"host": ["{{base_url}}"],
 							"path": ["login"]
 						},
-						"description": "Login pengguna dan mendapatkan token autentikasi"
+						"description": "Login ke sistem"
 					}
 				},
 				{
@@ -129,14 +114,13 @@
 							"host": ["{{base_url}}"],
 							"path": ["logout"]
 						},
-						"description": "Logout pengguna dan menghapus token"
+						"description": "Logout dari sistem"
 					}
 				}
 			]
 		},
 		{
 			"name": "Kost Management",
-			"description": "Endpoint untuk mengelola kost",
 			"item": [
 				{
 					"name": "List Kost",
@@ -159,48 +143,7 @@
 							"host": ["{{base_url}}"],
 							"path": ["kost"]
 						},
-						"description": "Menampilkan daftar kost (semua untuk penyewa, milik sendiri untuk pemilik)"
-					}
-				},
-				{
-					"name": "Search Kost",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							},
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/kost/search?alamat=jakarta&harga_min=1000000&harga_max=2000000",
-							"host": ["{{base_url}}"],
-							"path": ["kost", "search"],
-							"query": [
-								{
-									"key": "alamat",
-									"value": "jakarta",
-									"description": "Lokasi kost"
-								},
-								{
-									"key": "harga_min",
-									"value": "1000000",
-									"description": "Harga minimum per bulan"
-								},
-								{
-									"key": "harga_max",
-									"value": "2000000",
-									"description": "Harga maksimum per bulan"
-								}
-							]
-						},
-						"description": "Mencari kost berdasarkan kriteria tertentu"
+						"description": "Mendapatkan daftar kost (semua untuk pemilik, hanya yang tersedia untuk penyewa)"
 					}
 				},
 				{
@@ -235,6 +178,21 @@
 								{
 									"key": "deskripsi",
 									"value": "Kost nyaman dengan fasilitas lengkap",
+									"type": "text"
+								},
+								{
+									"key": "fasilitas",
+									"value": "AC, WiFi, Kamar Mandi Dalam",
+									"type": "text"
+								},
+								{
+									"key": "harga_sewa",
+									"value": "1500000",
+									"type": "text"
+								},
+								{
+									"key": "status_kost",
+									"value": "tersedia",
 									"type": "text"
 								},
 								{
@@ -279,7 +237,7 @@
 				{
 					"name": "Update Kost",
 					"request": {
-						"method": "POST",
+						"method": "PUT",
 						"header": [
 							{
 								"key": "Authorization",
@@ -296,11 +254,6 @@
 							"mode": "formdata",
 							"formdata": [
 								{
-									"key": "_method",
-									"value": "PUT",
-									"type": "text"
-								},
-								{
 									"key": "nama_kost",
 									"value": "Kost Bahagia Updated",
 									"type": "text"
@@ -312,12 +265,22 @@
 								},
 								{
 									"key": "deskripsi",
-									"value": "Kost nyaman dengan fasilitas lengkap",
+									"value": "Kost nyaman dengan fasilitas lengkap (updated)",
 									"type": "text"
 								},
 								{
-									"key": "status_aktif",
-									"value": "true",
+									"key": "fasilitas",
+									"value": "AC, WiFi, Kamar Mandi Dalam, TV",
+									"type": "text"
+								},
+								{
+									"key": "harga_sewa",
+									"value": "2000000",
+									"type": "text"
+								},
+								{
+									"key": "status_kost",
+									"value": "tersedia",
 									"type": "text"
 								},
 								{
@@ -332,7 +295,7 @@
 							"host": ["{{base_url}}"],
 							"path": ["kost", "1"]
 						},
-						"description": "Mengupdate data kost (khusus pemilik)"
+						"description": "Mengupdate data kost (khusus pemilik kost)"
 					}
 				},
 				{
@@ -356,25 +319,14 @@
 							"host": ["{{base_url}}"],
 							"path": ["kost", "1"]
 						},
-						"description": "Menghapus data kost (khusus pemilik)"
+						"description": "Menghapus data kost (khusus pemilik kost)"
 					}
-				}
-			]
-		},
-		{
-			"name": "Kamar Management",
-			"description": "Endpoint untuk mengelola kamar kost",
-			"item": [
+				},
 				{
-					"name": "List Kamar",
+					"name": "Search Kost",
 					"request": {
 						"method": "GET",
 						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							},
 							{
 								"key": "Accept",
 								"value": "application/json",
@@ -382,351 +334,47 @@
 							}
 						],
 						"url": {
-							"raw": "{{base_url}}/kost/1/kamar",
+							"raw": "{{base_url}}/kost/search?alamat=Jakarta&nama_kost=Kost&harga_min=1000000&harga_max=3000000&fasilitas=AC",
 							"host": ["{{base_url}}"],
-							"path": ["kost", "1", "kamar"]
-						},
-						"description": "Menampilkan daftar kamar dari kost tertentu"
-					}
-				},
-				{
-					"name": "Create Kamar",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							},
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "formdata",
-							"formdata": [
+							"path": ["kost", "search"],
+							"query": [
 								{
-									"key": "nomor_kamar",
-									"value": "A-101",
-									"type": "text"
+									"key": "alamat",
+									"value": "Jakarta"
 								},
 								{
-									"key": "ukuran_kamar",
-									"value": "12",
-									"type": "text",
-									"description": "dalam meter persegi"
+									"key": "nama_kost",
+									"value": "Kost"
 								},
 								{
-									"key": "harga_per_bulan",
-									"value": "1500000",
-									"type": "text"
+									"key": "harga_min",
+									"value": "1000000"
 								},
 								{
-									"key": "deskripsi",
-									"value": "Kamar nyaman dengan jendela besar",
-									"type": "text"
+									"key": "harga_max",
+									"value": "3000000"
 								},
 								{
-									"key": "foto_kamar",
-									"type": "file",
-									"src": []
+									"key": "fasilitas",
+									"value": "AC"
 								}
 							]
 						},
-						"url": {
-							"raw": "{{base_url}}/kost/1/kamar",
-							"host": ["{{base_url}}"],
-							"path": ["kost", "1", "kamar"]
-						},
-						"description": "Menambah kamar baru ke kost tertentu"
-					}
-				},
-				{
-					"name": "Show Kamar",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							},
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/kost/1/kamar/1",
-							"host": ["{{base_url}}"],
-							"path": ["kost", "1", "kamar", "1"]
-						},
-						"description": "Menampilkan detail kamar tertentu"
-					}
-				},
-				{
-					"name": "Update Kamar",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							},
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "formdata",
-							"formdata": [
-								{
-									"key": "_method",
-									"value": "PUT",
-									"type": "text"
-								},
-								{
-									"key": "nomor_kamar",
-									"value": "A-101",
-									"type": "text"
-								},
-								{
-									"key": "ukuran_kamar",
-									"value": "12",
-									"type": "text"
-								},
-								{
-									"key": "harga_per_bulan",
-									"value": "1500000",
-									"type": "text"
-								},
-								{
-									"key": "deskripsi",
-									"value": "Kamar nyaman dengan jendela besar",
-									"type": "text"
-								},
-								{
-									"key": "status",
-									"value": "tersedia",
-									"type": "text"
-								},
-								{
-									"key": "foto_kamar",
-									"type": "file",
-									"src": []
-								}
-							]
-						},
-						"url": {
-							"raw": "{{base_url}}/kost/1/kamar/1",
-							"host": ["{{base_url}}"],
-							"path": ["kost", "1", "kamar", "1"]
-						},
-						"description": "Mengupdate data kamar"
-					}
-				},
-				{
-					"name": "Delete Kamar",
-					"request": {
-						"method": "DELETE",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							},
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/kost/1/kamar/1",
-							"host": ["{{base_url}}"],
-							"path": ["kost", "1", "kamar", "1"]
-						},
-						"description": "Menghapus data kamar"
+						"description": "Mencari kost berdasarkan filter (alamat, nama, harga, fasilitas)"
 					}
 				}
 			]
-		},
-		{
-			"name": "Booking Management",
-			"description": "Endpoint untuk mengelola booking",
-			"item": [
-				{
-					"name": "Create Booking",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							},
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"id_kost\": 1,\n    \"id_kamar\": 1,\n    \"tanggal_mulai\": \"2024-06-01\",\n    \"tanggal_selesai\": \"2024-07-01\",\n    \"catatan\": \"Mohon disiapkan extra bed\"\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/bookings",
-							"host": ["{{base_url}}"],
-							"path": ["bookings"]
-						},
-						"description": "Membuat booking baru (untuk penyewa)"
-					}
-				},
-				{
-					"name": "List My Bookings",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							},
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/bookings/my",
-							"host": ["{{base_url}}"],
-							"path": ["bookings", "my"]
-						},
-						"description": "Menampilkan daftar booking milik penyewa yang login"
-					}
-				},
-				{
-					"name": "List Owner Bookings",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							},
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/bookings/owner",
-							"host": ["{{base_url}}"],
-							"path": ["bookings", "owner"]
-						},
-						"description": "Menampilkan daftar booking untuk kost milik pemilik yang login"
-					}
-				},
-				{
-					"name": "Show Booking",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							},
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/bookings/1",
-							"host": ["{{base_url}}"],
-							"path": ["bookings", "1"]
-						},
-						"description": "Menampilkan detail booking tertentu"
-					}
-				},
-				{
-					"name": "Update Booking Status",
-					"request": {
-						"method": "PUT",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							},
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"status\": \"diterima\",\n    \"catatan\": \"Booking diterima, silakan transfer DP\"\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/bookings/1/status",
-							"host": ["{{base_url}}"],
-							"path": ["bookings", "1", "status"]
-						},
-						"description": "Mengupdate status booking (untuk pemilik kost)"
-					}
-				}
-			]
-		}
-	],
-	"event": [
-		{
-			"listen": "prerequest",
-			"script": {
-				"type": "text/javascript",
-				"exec": [
-					""
-				]
-			}
-		},
-		{
-			"listen": "test",
-			"script": {
-				"type": "text/javascript",
-				"exec": [
-					""
-				]
-			}
 		}
 	],
 	"variable": [
 		{
 			"key": "base_url",
 			"value": "http://localhost:8000/api",
+			"type": "string"
+		},
+		{
+			"key": "token",
+			"value": "your_token_here",
 			"type": "string"
 		}
 	]

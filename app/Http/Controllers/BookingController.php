@@ -51,8 +51,7 @@ class BookingController extends Controller
             'id_kamar' => 'required|integer',
             'tanggal_mulai' => 'required|date|after:today',
             'tanggal_selesai' => 'required|date|after:tanggal_mulai',
-            'catatan' => 'nullable|string',
-            'bukti_pembayaran' => 'required|image|mimes:jpeg,png,jpg|max:2048'
+            'catatan' => 'nullable|string'
         ]);
 
         if ($validator->fails()) {
@@ -90,12 +89,6 @@ class BookingController extends Controller
                 ], 422);
             }
 
-            $buktiPath = null;
-            if ($request->hasFile('bukti_pembayaran')) {
-                $bukti = $request->file('bukti_pembayaran');
-                $buktiPath = $bukti->store('bukti_pembayaran', 'public');
-            }
-
             $durasi = strtotime($request->tanggal_selesai) - strtotime($request->tanggal_mulai);
             $bulan = ceil($durasi / (30 * 24 * 60 * 60));
             $totalHarga = $kamar->harga_per_bulan * $bulan;
@@ -111,7 +104,6 @@ class BookingController extends Controller
                 'tanggal_selesai' => $request->tanggal_selesai,
                 'status' => 'pending',
                 'total_harga' => $totalHarga,
-                'bukti_pembayaran' => $buktiPath,
                 'catatan' => $request->catatan
             ]);
 
@@ -206,10 +198,6 @@ class BookingController extends Controller
                 return response()->json(['message' => 'Anda tidak memiliki akses untuk menghapus booking ini'], 403);
             }
 
-            if ($booking->bukti_pembayaran) {
-                Storage::disk('public')->delete($booking->bukti_pembayaran);
-            }
-
             if ($booking->status === 'diterima') {
                 $booking->kamar->update(['status' => 'tersedia']);
             }
@@ -281,43 +269,10 @@ class BookingController extends Controller
 
             return response()->json([
                 'message' => 'Data booking berhasil diambil',
-                'debug_info' => [
-                    'user_id' => $user->id_pengguna,
-                    'raw_count' => count($rawQuery),
-                    'eloquent_count' => $bookings->count(),
-                    'booking_ids' => $bookings->pluck('id_booking')
-                ],
-                'bookings' => $bookings->map(function ($booking) {
-                    return [
-                        'id_booking' => $booking->id_booking,
-                        'tanggal_mulai' => $booking->tanggal_mulai,
-                        'tanggal_selesai' => $booking->tanggal_selesai,
-                        'status' => $booking->status,
-                        'catatan' => $booking->catatan,
-                        'kamar' => [
-                            'id_kamar' => $booking->kamar->id_kamar,
-                            'nomor_kamar' => $booking->kamar->nomor_kamar,
-                            'ukuran_kamar' => $booking->kamar->ukuran_kamar,
-                            'harga_per_bulan' => $booking->kamar->harga_per_bulan,
-                            'kost' => [
-                                'id_kost' => $booking->kamar->kost->id_kost,
-                                'nama_kost' => $booking->kamar->kost->nama_kost,
-                                'alamat' => $booking->kamar->kost->alamat
-                            ]
-                        ],
-                        'created_at' => $booking->created_at,
-                        'updated_at' => $booking->updated_at
-                    ];
-                })
+                'bookings' => $bookings
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Error retrieving bookings', [
-                'user_id' => $user->id_pengguna ?? 'unknown',
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-
             return response()->json([
                 'message' => 'Terjadi kesalahan saat mengambil data booking',
                 'error' => $e->getMessage()
@@ -361,37 +316,11 @@ class BookingController extends Controller
             $bookings = $bookings->orderBy('created_at', 'desc')->get();
 
             return response()->json([
-                'message' => 'Data booking berhasil dicari',
-                'search_term' => $searchTerm,
-                'total_found' => $bookings->count(),
-                'bookings' => $bookings->map(function ($booking) {
-                    return [
-                        'id_booking' => $booking->id_booking,
-                        'tanggal_mulai' => $booking->tanggal_mulai,
-                        'tanggal_selesai' => $booking->tanggal_selesai,
-                        'status' => $booking->status,
-                        'catatan' => $booking->catatan,
-                        'kamar' => [
-                            'nomor_kamar' => $booking->kamar->nomor_kamar,
-                            'ukuran_kamar' => $booking->kamar->ukuran_kamar,
-                            'harga_per_bulan' => $booking->kamar->harga_per_bulan,
-                            'kost' => [
-                                'nama_kost' => $booking->kamar->kost->nama_kost,
-                                'alamat' => $booking->kamar->kost->alamat
-                            ]
-                        ],
-                        'created_at' => $booking->created_at,
-                        'updated_at' => $booking->updated_at
-                    ];
-                })
+                'message' => 'Hasil pencarian booking',
+                'bookings' => $bookings
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Error searching bookings by location', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-
             return response()->json([
                 'message' => 'Terjadi kesalahan saat mencari booking',
                 'error' => $e->getMessage()

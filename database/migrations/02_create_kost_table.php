@@ -16,7 +16,8 @@ return new class extends Migration
             $table->text('deskripsi')->nullable();
             $table->text('fasilitas')->nullable();
             $table->string('foto_utama')->nullable();
-            $table->boolean('status_aktif')->default(true);
+            $table->decimal('harga_sewa', 10, 2);
+            $table->enum('status_kost', ['tersedia', 'terbooking', 'ditutup'])->default('tersedia');
             $table->timestamps();
 
             $table->foreign('id_pemilik')

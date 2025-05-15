@@ -41,15 +41,6 @@ class LoginController extends Controller
             ], 401);
         }
 
-        if (!$pengguna->is_verified && $pengguna->role === 'pemilik_kost') {
-            return response()->json([
-                'message' => 'Akun belum diverifikasi',
-                'errors' => [
-                    'email' => ['Akun Anda belum diverifikasi oleh admin. Silakan tunggu verifikasi.']
-                ]
-            ], 403);
-        }
-
         // Hapus token lama jika ada
         $pengguna->tokens()->delete();
 

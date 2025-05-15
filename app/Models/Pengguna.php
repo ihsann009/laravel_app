@@ -22,7 +22,6 @@ class Pengguna extends Authenticatable
         'nomor_telepon',
         'role',
         'alamat',
-        'is_verified'
     ];
 
     protected $hidden = [
