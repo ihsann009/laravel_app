@@ -75,7 +75,11 @@ class KostController extends Controller
             $fotoPath = null;
             if ($request->hasFile('foto_utama')) {
                 $foto = $request->file('foto_utama');
-                $fotoPath = $foto->store('kost', 'public');
+                // Simpan file ke folder public/kost
+                $fotoPath = $foto->hashName();
+                $foto->move(public_path('kost'), $fotoPath);
+                // Simpan path relatif ke database
+                $fotoPath = 'kost/' . $fotoPath;
             }
 
             // Generate ID kost
@@ -99,6 +103,19 @@ class KostController extends Controller
 
             // Load relasi yang diperlukan
             $kost->load(['pemilik:id_pengguna,nama,nomor_telepon']);
+
+            // Transform URL foto
+            if ($kost->foto_utama) {
+                // Pastikan path foto tidak mengandung URL lengkap
+                $cleanPath = $kost->foto_utama;
+                if (strpos($cleanPath, 'http://') === 0 || strpos($cleanPath, 'https://') === 0) {
+                    // Jika sudah URL lengkap, gunakan as is
+                    $kost->foto_utama = $cleanPath;
+                } else {
+                    // Jika path relatif, tambahkan base URL
+                    $kost->foto_utama = config('app.url') . '/' . ltrim($cleanPath, '/');
+                }
+            }
 
             return response()->json([
                 'message' => 'Kost berhasil ditambahkan',
@@ -164,8 +181,9 @@ class KostController extends Controller
                     Storage::disk('public')->delete($kost->foto_utama);
                 }
                 $foto = $request->file('foto_utama');
-                $fotoPath = $foto->store('kost', 'public');
-                $kost->foto_utama = $fotoPath;
+                $fotoPath = $foto->hashName();
+                $foto->store('kost', 'public');
+                $kost->foto_utama = $fotoPath ? 'kost/' . $fotoPath : null;
             }
 
             $kost->update([
@@ -219,36 +237,68 @@ class KostController extends Controller
         try {
             $query = Kost::query()->where('status_kost', 'tersedia');
 
-            // Filter berdasarkan alamat
-            if ($request->has('alamat')) {
-                $alamat = $request->alamat;
-                $query->where('alamat', 'like', "%{$alamat}%");
+            // Filter berdasarkan lokasi (alamat) jika diisi
+            if ($request->filled('lokasi')) {
+                $lokasi = strtolower($request->lokasi);
+                $query->where(function($q) use ($lokasi) {
+                    $q->whereRaw('LOWER(alamat) LIKE ?', ["%{$lokasi}%"])
+                      ->orWhereRaw('LOWER(nama_kost) LIKE ?', ["%{$lokasi}%"]);
+                });
             }
 
-            // Filter berdasarkan nama kost
-            if ($request->has('nama_kost')) {
-                $nama = $request->nama_kost;
-                $query->where('nama_kost', 'like', "%{$nama}%");
+            // Filter berdasarkan nama kost jika diisi
+            if ($request->filled('nama_kost')) {
+                $nama = strtolower($request->nama_kost);
+                $query->whereRaw('LOWER(nama_kost) LIKE ?', ["%{$nama}%"]);
             }
 
-            // Filter berdasarkan harga minimum
-            if ($request->has('harga_min')) {
+            // Filter berdasarkan range harga jika diisi
+            if ($request->filled('harga_min')) {
                 $query->where('harga_sewa', '>=', $request->harga_min);
             }
-
-            // Filter berdasarkan harga maksimum
-            if ($request->has('harga_max')) {
+            if ($request->filled('harga_max')) {
                 $query->where('harga_sewa', '<=', $request->harga_max);
             }
 
-            // Filter berdasarkan fasilitas
-            if ($request->has('fasilitas')) {
-                $fasilitas = $request->fasilitas;
-                $query->where('fasilitas', 'like', "%{$fasilitas}%");
+            // Filter berdasarkan fasilitas jika diisi
+            if ($request->filled('fasilitas')) {
+                $fasilitas = strtolower($request->fasilitas);
+                $query->whereRaw('LOWER(fasilitas) LIKE ?', ["%{$fasilitas}%"]);
+            }
+
+            // Sorting berdasarkan harga (opsional)
+            if ($request->filled('sort_by')) {
+                switch ($request->sort_by) {
+                    case 'harga_terendah':
+                        $query->orderBy('harga_sewa', 'asc');
+                        break;
+                    case 'harga_tertinggi':
+                        $query->orderBy('harga_sewa', 'desc');
+                        break;
+                    case 'terbaru':
+                        $query->orderBy('created_at', 'desc');
+                        break;
+                }
             }
 
             // Load relasi yang diperlukan
             $kosts = $query->with(['pemilik'])->get();
+
+            // Transform data untuk menambahkan URL lengkap
+            $kosts->transform(function ($kost) {
+                if ($kost->foto_utama) {
+                    // Pastikan path foto tidak mengandung URL lengkap
+                    $cleanPath = $kost->foto_utama;
+                    if (strpos($cleanPath, 'http://') === 0 || strpos($cleanPath, 'https://') === 0) {
+                        // Jika sudah URL lengkap, gunakan as is
+                        $kost->foto_utama = $cleanPath;
+                    } else {
+                        // Jika path relatif, tambahkan base URL
+                        $kost->foto_utama = config('app.url') . '/' . ltrim($cleanPath, '/');
+                    }
+                }
+                return $kost;
+            });
 
             return response()->json([
                 'message' => 'Hasil pencarian kost',
@@ -257,6 +307,11 @@ class KostController extends Controller
             ]);
 
         } catch (\Exception $e) {
+            \Log::error('Search Error:', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
             return response()->json([
                 'message' => 'Terjadi kesalahan saat mencari kost',
                 'error' => $e->getMessage()

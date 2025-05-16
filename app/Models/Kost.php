@@ -43,9 +43,6 @@ class Kost extends Model
      */
     public function getFotoUtamaAttribute($value)
     {
-        if ($value) {
-            return Storage::url($value);
-        }
-        return null;
+        return $value;
     }
 } 
